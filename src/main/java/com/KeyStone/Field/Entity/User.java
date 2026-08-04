@@ -28,6 +28,7 @@ public class User implements UserDetails {
     @Column(name = "user_id")
     private Long id;
 
+    @Getter
     @NotBlank
     private String userName;
 
@@ -60,6 +61,5 @@ public class User implements UserDetails {
         return email;
     }
 
-    public String getUserName(){ return userName;}
-
+    public String getUserName(){return userName;}
 }

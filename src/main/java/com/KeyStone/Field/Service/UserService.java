@@ -28,6 +28,10 @@ public class UserService {
 
     public UserResponse createUser(CreateUserRequest request) {
 
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateEmailException();
+        }
+
         User user = new User();
 
         user.setUserName(request.getUserName());
@@ -35,9 +39,6 @@ public class UserService {
         user.setRole(request.getRole());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException();
-        }
 
         User savedUser = userRepository.save(user);
 
@@ -45,7 +46,7 @@ public class UserService {
         response.setUserName(savedUser.getUserName());
         response.setRole(savedUser.getRole());
         response.setId(savedUser.getId());
-        response.setActive(savedUser.getActive());
+        response.setActive(true);
         response.setEmail(savedUser.getEmail());
 
         return response;
