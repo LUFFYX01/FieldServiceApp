@@ -1,12 +1,17 @@
 package com.KeyStone.Field.Service;
 
+import com.KeyStone.Field.DTO.CreateCustomerRequest;
+import com.KeyStone.Field.DTO.CustomerResponse;
+import com.KeyStone.Field.DTO.UpdateCustomerRequest;
 import com.KeyStone.Field.Entity.Customer;
+import com.KeyStone.Field.Exception.CustomerNotFoundException;
+import com.KeyStone.Field.Exception.DuplicateEmailException;
+import com.KeyStone.Field.Exception.UserNotFoundException;
 import com.KeyStone.Field.Repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 
-import java.sql.SQLOutput;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class CustomerService {
@@ -18,39 +23,98 @@ public class CustomerService {
         this.customerRepository = customerRepository;
     }
 
-    public Customer createCustomer(Customer customer){
-        System.out.println("Customer created");
+    public CustomerResponse createCustomer(CreateCustomerRequest request){
+
+        if (customerRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateEmailException();
+        }
+
+        Customer customer = new Customer();
+        customer.setCompanyName(request.getCompanyName());
+        customer.setContactPerson(request.getContactPerson());
+        customer.setEmail(request.getEmail());
+        customer.setPhone(request.getPhone());
+        customer.setAddress(request.getAddress());
         customer.setActive(true);
-        return customerRepository.save(customer);
+
+        Customer savedCustomer = customerRepository.save(customer);
+
+        return new CustomerResponse(
+                savedCustomer.getId(),
+                savedCustomer.getCompanyName(),
+                savedCustomer.getEmail(),
+                savedCustomer.getPhone(),
+                savedCustomer.getAddress(),
+                savedCustomer.getActive(),
+                savedCustomer.getCreatedAt()
+        );
 
     }
-    public List<Customer> getAllCustomer(){
-        System.out.println("All customers are fetched");
-        return customerRepository.findAll();
+    public List<CustomerResponse> getAllCustomers(){
+      List<Customer> customers = customerRepository.findAll();
+
+      List<CustomerResponse> responseList = new ArrayList<>();
+      for(Customer customer : customers){
+          CustomerResponse response = new CustomerResponse(customer.getId(),
+                  customer.getCompanyName(),
+                  customer.getEmail(),
+                  customer.getPhone(),
+                  customer.getAddress(),
+                  customer.getActive(),
+                  customer.getCreatedAt());
+
+          responseList.add(response);
+      }
+
+      return responseList;
     }
 
-    public Customer getCustomerById(Long id){
-        return customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+    public CustomerResponse getCustomerById(Long id){
+        Customer customer =  customerRepository.findById(id)
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+
+        return new CustomerResponse(
+                customer.getId(),
+                customer.getCompanyName(),
+                customer.getEmail(),
+                customer.getPhone(),
+                customer.getAddress(),
+                customer.getActive(),
+                customer.getCreatedAt()
+        );
 
     }
 
-    public Customer updateCustomer(Long id,Customer updatedCustomer){
+    public CustomerResponse updateCustomer(Long id, UpdateCustomerRequest request){
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new CustomerNotFoundException(id));
 
-        customer.setCompanyName(updatedCustomer.getCompanyName());
-        customer.setBillingAddress(updatedCustomer.getBillingAddress());
-        customer.setEmail(updatedCustomer.getEmail());
-        customer.setPhone(updatedCustomer.getPhone());
-        customer.setContactPerson(updatedCustomer.getContactPerson());
-        return customerRepository.save(customer);
+        if (customerRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw new DuplicateEmailException();
+        }
+
+        customer.setCompanyName(request.getCompanyName());
+        customer.setAddress(request.getAddress());
+        customer.setEmail(request.getEmail());
+        customer.setPhone(request.getPhone());
+        customer.setContactPerson(request.getContactPerson());
+
+
+        Customer updatedCustomer = customerRepository.save(customer);
+        return new CustomerResponse(
+                updatedCustomer.getId(),
+                updatedCustomer.getCompanyName(),
+                updatedCustomer.getEmail(),
+                updatedCustomer.getPhone(),
+                updatedCustomer.getAddress(),
+                updatedCustomer.getActive(),
+                updatedCustomer.getCreatedAt()
+        );
     }
 
     public void deleteCustomer(Long id){
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new CustomerNotFoundException(id));
         customerRepository.delete(customer);
-        System.out.println("Customer Deleted");
     }
 }

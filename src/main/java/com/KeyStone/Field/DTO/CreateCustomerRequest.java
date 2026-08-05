@@ -1,9 +1,8 @@
 package com.KeyStone.Field.DTO;
 
-import com.KeyStone.Field.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 @Getter
@@ -11,19 +10,21 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateUserRequest {
+public class CreateCustomerRequest {
 
     @NotBlank
-    private String userName;
+    private String companyName;
+
+    @NotBlank
+    private String contactPerson;
 
     @NotBlank
     @Email
     private String email;
 
+    @Pattern(regexp = "^[0-9]{10}$")
+    private String phone;
+
     @NotBlank
-    private String password;
-
-    @NotNull
-    private Role role;
+    private String address;
 }
-

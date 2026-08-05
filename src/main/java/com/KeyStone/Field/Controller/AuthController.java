@@ -19,18 +19,22 @@ public class AuthController {
     private final UserService userService;
 
     public AuthController(LoginService loginService,
-                          UserService userService){
+                          UserService userService) {
         this.loginService = loginService;
         this.userService = userService;
     }
 
     @PostMapping("/register")
-    public UserResponse register(@Valid @RequestBody CreateUserRequest request){
+    public UserResponse register(@Valid @RequestBody CreateUserRequest request) {
         return userService.createUser(request);
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request){
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+
+        System.out.println(">>> Login controller reached <<<");
+
         return loginService.login(request);
     }
 }
+
