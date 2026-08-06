@@ -29,6 +29,20 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
+    @ExceptionHandler(CustomerNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCustomerNotFound(CustomerNotFoundException ex){
+
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(status)
+                .body(errorResponse);
+    }
+
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException ex){
         HttpStatus status = HttpStatus.CONFLICT;

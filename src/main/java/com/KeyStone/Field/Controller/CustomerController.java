@@ -5,6 +5,7 @@ import com.KeyStone.Field.DTO.CustomerResponse;
 import com.KeyStone.Field.DTO.UpdateCustomerRequest;
 import com.KeyStone.Field.Entity.Customer;
 import com.KeyStone.Field.Service.CustomerService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    public CustomerResponse createCustomer(@RequestBody CreateCustomerRequest request){
+    public CustomerResponse createCustomer(@Valid @RequestBody CreateCustomerRequest request){
 
         return customerService.createCustomer(request);
     }
@@ -31,19 +32,20 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public CustomerResponse getCustomerById(@PathVariable Long id) {
+    public CustomerResponse getCustomerById(@Valid @PathVariable Long id) {
         return customerService.getCustomerById(id);
     }
 
     @PutMapping("/{id}")
     public CustomerResponse updateCustomer(
+            @Valid
             @PathVariable Long id,
             @RequestBody UpdateCustomerRequest customerRequest){
         return customerService.updateCustomer(id, customerRequest);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteCustomer(@PathVariable Long id){
+    public void deleteCustomer(@Valid @PathVariable Long id){
         customerService.deleteCustomer(id);
     }
 
