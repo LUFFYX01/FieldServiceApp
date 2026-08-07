@@ -30,12 +30,13 @@ public class Customer {
     private String contactPerson;
 
     @Email
+    @NotBlank
     private String email;
 
     @Pattern(regexp = "^[0-9]{10}$")
     private String phone;
 
-    private String BillingAddress;
+    private String Address;
 
     private Boolean active;
 

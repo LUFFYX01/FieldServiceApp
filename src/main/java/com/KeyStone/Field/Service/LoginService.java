@@ -19,20 +19,27 @@ public class LoginService {
         this.jwtService = jwtService;
     }
 
-    public LoginResponse login(LoginRequest request){
-        Authentication authentication =
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(
-                                request.getEmail(),
-                                request.getPassword()
-                        )
-                );
-        User user = (User) authentication.getPrincipal();
-        String token = jwtService.generateToken(user);
-        return new LoginResponse(
-                token,
-                "Bearer"
-        );
+    public LoginResponse login(LoginRequest request) {
+
+        try {
+            Authentication authentication =
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(
+                                    request.getEmail(),
+                                    request.getPassword()
+                            )
+                    );
+
+            User user = (User) authentication.getPrincipal();
+
+            String token = jwtService.generateToken(user);
+
+            return new LoginResponse(token, "Bearer");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 }
 

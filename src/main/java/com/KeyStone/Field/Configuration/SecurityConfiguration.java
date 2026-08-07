@@ -8,21 +8,25 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
+import com.KeyStone.Field.enums.Permission;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfiguration {
-    
+
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    
-    
+
+
     public SecurityConfiguration(CustomUserDetailsService customUserDetailsService,
                                  JwtAuthenticationFilter jwtAuthenticationFilter){
         this.customUserDetailsService = customUserDetailsService;
@@ -40,7 +44,22 @@ public class SecurityConfiguration {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // Customer APIs
+                        .requestMatchers(HttpMethod.POST, "/api/customers/**")
+                        .hasAuthority(Permission.CUSTOMER_CREATE.name())
+
+                        .requestMatchers(HttpMethod.GET, "/api/customers/**")
+                        .hasAuthority(Permission.CUSTOMER_READ.name())
+
+                        .requestMatchers(HttpMethod.PUT, "/api/customers/**")
+                        .hasAuthority(Permission.CUSTOMER_UPDATE.name())
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/customers/**")
+                        .hasAuthority(Permission.CUSTOMER_DELETE.name())
+
                         .anyRequest().authenticated()
                 )
 

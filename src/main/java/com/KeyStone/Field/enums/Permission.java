@@ -1,0 +1,19 @@
+package com.KeyStone.Field.enums;
+
+public enum Permission {
+    CUSTOMER_READ,
+    CUSTOMER_CREATE,
+    CUSTOMER_UPDATE,
+    CUSTOMER_DELETE,
+
+    USER_READ,
+    USER_CREATE,
+    USER_UPDATE,
+    USER_DELETE,
+
+    WORKORDER_READ,
+    WORKORDER_CREATE,
+    WORKORDER_UPDATE,
+    WORKORDER_DELETE,
+    WORKORDER_ASSIGN
+}

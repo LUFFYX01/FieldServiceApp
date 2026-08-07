@@ -8,12 +8,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import com.KeyStone.Field.enums.*;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.List;
 
 
 @Entity
@@ -28,7 +26,6 @@ public class User implements UserDetails {
     @Column(name = "user_id")
     private Long id;
 
-    @Getter
     @NotBlank
     private String userName;
 
@@ -43,6 +40,7 @@ public class User implements UserDetails {
     @NotBlank
     private String password;
 
+    @Column(nullable = false)
     private Boolean active;
 
     @CreationTimestamp
@@ -51,14 +49,17 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(
-                new SimpleGrantedAuthority("ROLE_" + role.name())
-        );
+        return role.getAuthorities();
     }
 
     @Override
     public String getUsername() {
         return email;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return Boolean.TRUE.equals(active);
     }
 
     public String getUserName(){return userName;}

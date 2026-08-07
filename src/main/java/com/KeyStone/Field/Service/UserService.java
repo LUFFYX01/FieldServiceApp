@@ -37,6 +37,7 @@ public class UserService {
         user.setUserName(request.getUserName());
         user.setEmail(request.getEmail());
         user.setRole(request.getRole());
+        user.setActive(true);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
 
@@ -46,7 +47,7 @@ public class UserService {
         response.setUserName(savedUser.getUserName());
         response.setRole(savedUser.getRole());
         response.setId(savedUser.getId());
-        response.setActive(true);
+        response.setActive(savedUser.getActive());
         response.setEmail(savedUser.getEmail());
 
         return response;
