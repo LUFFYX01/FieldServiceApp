@@ -1,4 +1,4 @@
-package com.KeyStone.Field.ENUM;
+package com.KeyStone.Field.enums;
 
 
 public enum Role {

@@ -1,6 +1,6 @@
 package com.KeyStone.Field.DTO;
 
-import com.KeyStone.Field.ENUM.Role;
+import com.KeyStone.Field.enums.Role;
 import lombok.*;
 
 @Getter

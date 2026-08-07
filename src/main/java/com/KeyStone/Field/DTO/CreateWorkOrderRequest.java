@@ -1,7 +1,6 @@
 package com.KeyStone.Field.DTO;
 
-import com.KeyStone.Field.enums.Role;
-import jakarta.validation.constraints.Email;
+import com.KeyStone.Field.enums.WorkOrderPriority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -11,19 +10,17 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateUserRequest {
+public class CreateWorkOrderRequest {
 
     @NotBlank
-    private String userName;
+    private String title;
 
     @NotBlank
-    @Email
-    private String email;
-
-    @NotBlank
-    private String password;
+    private String description;
 
     @NotNull
-    private Role role;
-}
+    private WorkOrderPriority priority;
 
+    @NotNull
+    private Long customerId;
+}
