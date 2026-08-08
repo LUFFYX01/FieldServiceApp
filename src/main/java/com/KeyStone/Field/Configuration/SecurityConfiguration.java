@@ -60,8 +60,22 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/api/customers/**")
                         .hasAuthority(Permission.CUSTOMER_DELETE.name())
 
+                        // Work order APIs
                         .requestMatchers(HttpMethod.PATCH, "/api/workorders/*/assign")
                         .hasAuthority(Permission.WORKORDER_ASSIGN.name())
+
+                        // Site APIs
+                        .requestMatchers(HttpMethod.POST, "/api/sites/**")
+                        .hasAuthority(Permission.SITE_CREATE.name())
+
+                        .requestMatchers(HttpMethod.GET, "/api/sites/**")
+                        .hasAuthority(Permission.SITE_READ.name())
+
+                        .requestMatchers(HttpMethod.PUT, "/api/sites/**")
+                        .hasAuthority(Permission.SITE_UPDATE.name())
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/sites/**")
+                        .hasAuthority(Permission.SITE_DELETE.name())
 
                         .anyRequest().authenticated()
                 )

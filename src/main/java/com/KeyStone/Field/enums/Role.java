@@ -26,7 +26,12 @@ public enum Role {
             Permission.WORKORDER_READ,
             Permission.WORKORDER_UPDATE,
             Permission.WORKORDER_DELETE,
-            Permission.WORKORDER_ASSIGN
+            Permission.WORKORDER_ASSIGN,
+
+            Permission.SITE_CREATE,
+            Permission.SITE_READ,
+            Permission.SITE_UPDATE,
+            Permission.SITE_DELETE
     )),
 
     DISPATCHER(Set.of(
@@ -39,7 +44,12 @@ public enum Role {
             Permission.WORKORDER_CREATE,
             Permission.WORKORDER_READ,
             Permission.WORKORDER_UPDATE,
-            Permission.WORKORDER_ASSIGN
+            Permission.WORKORDER_ASSIGN,
+
+            Permission.SITE_CREATE,
+            Permission.SITE_READ,
+            Permission.SITE_UPDATE,
+            Permission.SITE_DELETE
     )),
 
     TECHNICIAN(Set.of(

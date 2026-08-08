@@ -23,4 +23,7 @@ public class CreateWorkOrderRequest {
 
     @NotNull
     private Long customerId;
+
+    @NotNull
+    private Long siteId;
 }

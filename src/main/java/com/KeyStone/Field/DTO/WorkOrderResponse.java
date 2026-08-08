@@ -14,28 +14,25 @@ import java.time.LocalDateTime;
 public class WorkOrderResponse {
 
     private Long id;
-
     private String title;
-
     private String description;
 
     private WorkOrderStatus status;
-
     private WorkOrderPriority priority;
 
     private Long customerId;
-
     private String customerName;
 
     private Long technicianId;
-
     private String technicianName;
 
     private LocalDateTime createdAt;
-
     private LocalDateTime scheduledDate;
-
     private LocalDateTime completedDate;
 
     private String notes;
+
+    private Long siteId;
+    private String siteName;
+    private String siteAddress;
 }

@@ -4,20 +4,18 @@ import com.KeyStone.Field.DTO.AssignTechnicianRequest;
 import com.KeyStone.Field.DTO.CreateWorkOrderRequest;
 import com.KeyStone.Field.DTO.UpdateWorkOrderRequest;
 import com.KeyStone.Field.DTO.WorkOrderResponse;
+import com.KeyStone.Field.Entity.Site;
 import com.KeyStone.Field.Entity.User;
-import com.KeyStone.Field.Exception.UserNotFoundException;
-import com.KeyStone.Field.Exception.WorkOrderNotFoundException;
+import com.KeyStone.Field.Exception.*;
+import com.KeyStone.Field.Repository.SiteRepository;
 import com.KeyStone.Field.Repository.UserRepository;
 import com.KeyStone.Field.enums.Role;
 import com.KeyStone.Field.enums.WorkOrderStatus;
 import com.KeyStone.Field.Entity.Customer;
 import com.KeyStone.Field.Entity.WorkOrder;
-import com.KeyStone.Field.Exception.CustomerNotFoundException;
 import com.KeyStone.Field.Repository.CustomerRepository;
 import com.KeyStone.Field.Repository.WorkOrderRepository;
 import org.springframework.stereotype.Service;
-import com.KeyStone.Field.Exception.InvalidTechnicianException;
-import com.KeyStone.Field.Exception.InvalidWorkOrderStateException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,13 +26,16 @@ public class WorkOrderService {
     private final WorkOrderRepository workOrderRepository;
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
+    private final SiteRepository siteRepository;
 
     public WorkOrderService(WorkOrderRepository workOrderRepository,
                             CustomerRepository customerRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            SiteRepository siteRepository) {
         this.workOrderRepository = workOrderRepository;
         this.customerRepository = customerRepository;
         this.userRepository = userRepository;
+        this.siteRepository = siteRepository;
     }
 
     private WorkOrderResponse mapToResponse(WorkOrder workOrder) {
@@ -45,8 +46,14 @@ public class WorkOrderService {
                 .description(workOrder.getDescription())
                 .priority(workOrder.getPriority())
                 .status(workOrder.getStatus())
+
                 .customerId(workOrder.getCustomer().getId())
                 .customerName(workOrder.getCustomer().getCompanyName())
+
+                .siteId(workOrder.getSite().getId())
+                .siteName(workOrder.getSite().getSiteName())
+                .siteAddress(workOrder.getSite().getAddress())
+
                 .technicianId(
                         workOrder.getAssignedTechnician() != null
                                 ? workOrder.getAssignedTechnician().getId()
@@ -57,6 +64,7 @@ public class WorkOrderService {
                                 ? workOrder.getAssignedTechnician().getUserName()
                                 : null
                 )
+
                 .createdAt(workOrder.getCreatedAt())
                 .scheduledDate(workOrder.getScheduledDate())
                 .completedDate(workOrder.getCompletedDate())
@@ -70,6 +78,16 @@ public class WorkOrderService {
                 .orElseThrow(() ->
                         new CustomerNotFoundException(request.getCustomerId()));
 
+        Site site = siteRepository.findById(request.getSiteId())
+                .orElseThrow(() ->
+                        new SiteNotFoundException(request.getSiteId()));
+
+        if (!site.getCustomer().getId().equals(customer.getId())) {
+            throw new IllegalArgumentException(
+                    "Site does not belong to the selected customer"
+            );
+        }
+
         WorkOrder workOrder = new WorkOrder();
 
         workOrder.setTitle(request.getTitle());
@@ -77,6 +95,7 @@ public class WorkOrderService {
         workOrder.setPriority(request.getPriority());
         workOrder.setStatus(WorkOrderStatus.OPEN);
         workOrder.setCustomer(customer);
+        workOrder.setSite(site);
 
         WorkOrder savedWorkOrder = workOrderRepository.save(workOrder);
 

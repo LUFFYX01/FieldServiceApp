@@ -130,4 +130,21 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(errorResponse);
     }
+
+    @ExceptionHandler(SiteNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleSiteNotFound(
+            SiteNotFoundException ex) {
+
+        HttpStatus status = HttpStatus.NOT_FOUND;
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
 }

@@ -57,4 +57,9 @@ public class WorkOrder {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "site_id", nullable = false)
+    @NotNull
+    private Site site;
 }
