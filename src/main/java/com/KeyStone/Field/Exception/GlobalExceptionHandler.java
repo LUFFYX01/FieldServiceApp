@@ -79,4 +79,55 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(errorResponse);
     }
+
+    @ExceptionHandler(InvalidTechnicianException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTechnician(
+            InvalidTechnicianException ex) {
+
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidWorkOrderStateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidWorkOrderState(
+            InvalidWorkOrderStateException ex) {
+
+        HttpStatus status = HttpStatus.CONFLICT;
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(WorkOrderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWorkOrderNotFound(
+            WorkOrderNotFoundException ex) {
+
+        HttpStatus status = HttpStatus.NOT_FOUND;
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
 }

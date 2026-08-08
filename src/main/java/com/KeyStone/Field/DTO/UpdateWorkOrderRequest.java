@@ -17,8 +17,6 @@ public class UpdateWorkOrderRequest {
 
     private WorkOrderPriority priority;
 
-    private Long technicianId;
-
     private LocalDateTime scheduledDate;
 
     private LocalDateTime completedDate;

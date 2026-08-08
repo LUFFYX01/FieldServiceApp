@@ -60,6 +60,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/api/customers/**")
                         .hasAuthority(Permission.CUSTOMER_DELETE.name())
 
+                        .requestMatchers(HttpMethod.PATCH, "/api/workorders/*/assign")
+                        .hasAuthority(Permission.WORKORDER_ASSIGN.name())
+
                         .anyRequest().authenticated()
                 )
 
