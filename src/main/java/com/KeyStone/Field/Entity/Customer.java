@@ -36,7 +36,7 @@ public class Customer {
     @Pattern(regexp = "^[0-9]{10}$")
     private String phone;
 
-    private String Address;
+    private String address;
 
     private Boolean active;
 
