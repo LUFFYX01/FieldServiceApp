@@ -4,17 +4,11 @@ import com.KeyStone.Field.DTO.AssignTechnicianRequest;
 import com.KeyStone.Field.DTO.CreateWorkOrderRequest;
 import com.KeyStone.Field.DTO.UpdateWorkOrderRequest;
 import com.KeyStone.Field.DTO.WorkOrderResponse;
-import com.KeyStone.Field.Entity.Site;
-import com.KeyStone.Field.Entity.User;
+import com.KeyStone.Field.Entity.*;
 import com.KeyStone.Field.Exception.*;
-import com.KeyStone.Field.Repository.SiteRepository;
-import com.KeyStone.Field.Repository.UserRepository;
+import com.KeyStone.Field.Repository.*;
 import com.KeyStone.Field.enums.Role;
 import com.KeyStone.Field.enums.WorkOrderStatus;
-import com.KeyStone.Field.Entity.Customer;
-import com.KeyStone.Field.Entity.WorkOrder;
-import com.KeyStone.Field.Repository.CustomerRepository;
-import com.KeyStone.Field.Repository.WorkOrderRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -27,15 +21,19 @@ public class WorkOrderService {
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
     private final SiteRepository siteRepository;
+    private final WorkOrderHistoryRepository historyRepository;
 
     public WorkOrderService(WorkOrderRepository workOrderRepository,
                             CustomerRepository customerRepository,
                             UserRepository userRepository,
-                            SiteRepository siteRepository) {
+                            SiteRepository siteRepository,
+                            WorkOrderHistoryRepository historyRepository) {
         this.workOrderRepository = workOrderRepository;
         this.customerRepository = customerRepository;
         this.userRepository = userRepository;
         this.siteRepository = siteRepository;
+        this.historyRepository = historyRepository ;
+
     }
 
     private WorkOrderResponse mapToResponse(WorkOrder workOrder) {
@@ -97,7 +95,17 @@ public class WorkOrderService {
         workOrder.setCustomer(customer);
         workOrder.setSite(site);
 
-        WorkOrder savedWorkOrder = workOrderRepository.save(workOrder);
+        WorkOrder savedWorkOrder =
+                workOrderRepository.save(workOrder);
+
+        WorkOrderHistory history =
+                WorkOrderHistory.builder()
+                        .workOrder(savedWorkOrder)
+                        .status(WorkOrderStatus.OPEN)
+                        .description("Work order created")
+                        .build();
+
+        historyRepository.save(history);
 
         return mapToResponse(savedWorkOrder);
     }
@@ -109,19 +117,7 @@ public class WorkOrderService {
         List<WorkOrderResponse> responseList = new ArrayList<>();
 
         for (WorkOrder workOrder : workOrders) {
-
-            WorkOrderResponse response = WorkOrderResponse.builder()
-                    .id(workOrder.getId())
-                    .title(workOrder.getTitle())
-                    .description(workOrder.getDescription())
-                    .priority(workOrder.getPriority())
-                    .status(workOrder.getStatus())
-                    .customerId(workOrder.getCustomer().getId())
-                    .customerName(workOrder.getCustomer().getCompanyName())
-                    .createdAt(workOrder.getCreatedAt())
-                    .build();
-
-            responseList.add(response);
+            responseList.add(mapToResponse(workOrder));
         }
 
         return responseList;
@@ -135,24 +131,52 @@ public class WorkOrderService {
         return mapToResponse(workOrder);
     }
 
-    public WorkOrderResponse updateWorkOrder(Long id,
-                                             UpdateWorkOrderRequest request) {
+    public WorkOrderResponse updateWorkOrder(
+            Long id,
+            UpdateWorkOrderRequest request) {
 
-        WorkOrder workOrder = workOrderRepository.findById(id)
-                .orElseThrow(() -> new WorkOrderNotFoundException(id));
+        WorkOrder workOrder =
+                workOrderRepository.findById(id)
+                        .orElseThrow(() ->
+                                new WorkOrderNotFoundException(id));
+
+        WorkOrderStatus oldStatus =
+                workOrder.getStatus();
 
         workOrder.setStatus(request.getStatus());
         workOrder.setPriority(request.getPriority());
-        workOrder.setScheduledDate(request.getScheduledDate());
-        workOrder.setCompletedDate(request.getCompletedDate());
-        workOrder.setNotes(request.getNotes());
+        workOrder.setScheduledDate(
+                request.getScheduledDate()
+        );
+        workOrder.setCompletedDate(
+                request.getCompletedDate()
+        );
+        workOrder.setNotes(
+                request.getNotes()
+        );
 
+        WorkOrder updatedWorkOrder =
+                workOrderRepository.save(workOrder);
 
-        WorkOrder updatedWorkOrder = workOrderRepository.save(workOrder);
+        if (oldStatus != request.getStatus()) {
+
+            WorkOrderHistory history =
+                    WorkOrderHistory.builder()
+                            .workOrder(updatedWorkOrder)
+                            .status(request.getStatus())
+                            .description(
+                                    "Status changed from "
+                                            + oldStatus
+                                            + " to "
+                                            + request.getStatus()
+                            )
+                            .build();
+
+            historyRepository.save(history);
+        }
 
         return mapToResponse(updatedWorkOrder);
     }
-
     public void deleteWorkOrder(Long id) {
 
         WorkOrder workOrder = workOrderRepository.findById(id)
@@ -188,7 +212,20 @@ public class WorkOrderService {
         workOrder.setAssignedTechnician(technician);
         workOrder.setStatus(WorkOrderStatus.ASSIGNED);
 
-        WorkOrder savedWorkOrder = workOrderRepository.save(workOrder);
+        WorkOrder savedWorkOrder =
+                workOrderRepository.save(workOrder);
+
+        WorkOrderHistory history =
+                WorkOrderHistory.builder()
+                        .workOrder(savedWorkOrder)
+                        .status(WorkOrderStatus.ASSIGNED)
+                        .description(
+                                "Technician assigned: "
+                                        + technician.getUserName()
+                        )
+                        .build();
+
+        historyRepository.save(history);
 
         return mapToResponse(savedWorkOrder);
     }
