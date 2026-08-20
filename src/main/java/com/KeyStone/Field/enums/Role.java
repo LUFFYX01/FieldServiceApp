@@ -31,7 +31,12 @@ public enum Role {
             Permission.SITE_CREATE,
             Permission.SITE_READ,
             Permission.SITE_UPDATE,
-            Permission.SITE_DELETE
+            Permission.SITE_DELETE,
+
+            Permission.PART_READ,
+            Permission.PART_CREATE,
+            Permission.PART_UPDATE,
+            Permission.PART_DELETE
     )),
 
     DISPATCHER(Set.of(
@@ -49,12 +54,18 @@ public enum Role {
             Permission.SITE_CREATE,
             Permission.SITE_READ,
             Permission.SITE_UPDATE,
-            Permission.SITE_DELETE
+            Permission.SITE_DELETE,
+
+            Permission.PART_READ,
+            Permission.PART_CREATE,
+            Permission.PART_UPDATE
     )),
 
     TECHNICIAN(Set.of(
             Permission.WORKORDER_READ,
-            Permission.WORKORDER_UPDATE
+            Permission.WORKORDER_UPDATE,
+
+            Permission.PART_READ
     ));
 
     private final Set<Permission> permissions;

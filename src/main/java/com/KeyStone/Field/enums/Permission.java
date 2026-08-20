@@ -20,5 +20,10 @@ public enum Permission {
     SITE_READ,
     SITE_CREATE,
     SITE_UPDATE,
-    SITE_DELETE
+    SITE_DELETE,
+
+    PART_READ,
+    PART_CREATE,
+    PART_UPDATE,
+    PART_DELETE
 }

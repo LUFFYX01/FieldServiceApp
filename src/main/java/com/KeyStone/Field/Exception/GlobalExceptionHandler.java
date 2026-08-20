@@ -16,9 +16,11 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex){
+    public ResponseEntity<ErrorResponse> handleUserNotFound(
+            UserNotFoundException ex) {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
@@ -30,9 +32,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CustomerNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleCustomerNotFound(CustomerNotFoundException ex){
+    public ResponseEntity<ErrorResponse> handleCustomerNotFound(
+            CustomerNotFoundException ex) {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
@@ -44,8 +48,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DuplicateEmailException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicateEmailException ex){
+    public ResponseEntity<ErrorResponse> handleDuplicateEmail(
+            DuplicateEmailException ex) {
+
         HttpStatus status = HttpStatus.CONFLICT;
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
@@ -56,29 +63,83 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception){
-        HttpStatus status = HttpStatus.BAD_REQUEST;
+    // =========================
+    // PART EXCEPTIONS
+    // =========================
 
-        Map<String, String> errors = new HashMap<>();
-        for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
-            errors.put(
-                    fieldError.getField(),
-                    fieldError.getDefaultMessage()
-            );
-        }
-        ErrorResponse errorResponse =ErrorResponse.builder()
+    @ExceptionHandler(DuplicatePartNumberException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePartNumber(
+            DuplicatePartNumberException ex) {
+
+        HttpStatus status = HttpStatus.CONFLICT;
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(status.value())
-                .message("Validation failed")
-                .errors(errors)
+                .message(ex.getMessage())
                 .build();
-
 
         return ResponseEntity
                 .status(status)
                 .body(errorResponse);
     }
+
+    @ExceptionHandler(PartNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePartNotFound(
+            PartNotFoundException ex) {
+
+        HttpStatus status = HttpStatus.NOT_FOUND;
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(status.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(
+            MethodArgumentNotValidException exception) {
+
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        Map<String, String> errors =
+                new HashMap<>();
+
+        for (FieldError fieldError :
+                exception.getBindingResult()
+                        .getFieldErrors()) {
+
+            errors.put(
+                    fieldError.getField(),
+                    fieldError.getDefaultMessage()
+            );
+        }
+
+        ErrorResponse errorResponse =
+                ErrorResponse.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(status.value())
+                        .message("Validation failed")
+                        .errors(errors)
+                        .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
+
+    // =========================
+    // WORK ORDER EXCEPTIONS
+    // =========================
 
     @ExceptionHandler(InvalidTechnicianException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTechnician(
@@ -86,11 +147,12 @@ public class GlobalExceptionHandler {
 
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(status.value())
-                .message(ex.getMessage())
-                .build();
+        ErrorResponse errorResponse =
+                ErrorResponse.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(status.value())
+                        .message(ex.getMessage())
+                        .build();
 
         return ResponseEntity
                 .status(status)
@@ -103,11 +165,12 @@ public class GlobalExceptionHandler {
 
         HttpStatus status = HttpStatus.CONFLICT;
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(status.value())
-                .message(ex.getMessage())
-                .build();
+        ErrorResponse errorResponse =
+                ErrorResponse.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(status.value())
+                        .message(ex.getMessage())
+                        .build();
 
         return ResponseEntity
                 .status(status)
@@ -120,22 +183,45 @@ public class GlobalExceptionHandler {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(status.value())
-                .message(ex.getMessage())
-                .build();
+        ErrorResponse errorResponse =
+                ErrorResponse.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(status.value())
+                        .message(ex.getMessage())
+                        .build();
 
         return ResponseEntity
                 .status(status)
                 .body(errorResponse);
     }
 
+    // =========================
+    // SITE
+    // =========================
+
     @ExceptionHandler(SiteNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleSiteNotFound(
             SiteNotFoundException ex) {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
+
+        ErrorResponse errorResponse =
+                ErrorResponse.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(status.value())
+                        .message(ex.getMessage())
+                        .build();
+
+        return ResponseEntity
+                .status(status)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(DuplicateWorkOrderPartException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateWorkOrderPart(
+            DuplicateWorkOrderPartException ex) {
+
+        HttpStatus status = HttpStatus.CONFLICT;
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())

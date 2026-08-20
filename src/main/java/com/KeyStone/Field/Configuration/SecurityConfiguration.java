@@ -69,7 +69,19 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/api/customers/**")
                         .hasAuthority(Permission.CUSTOMER_DELETE.name())
 
-                        // Work order APIs
+                        // Work Order APIs
+                        .requestMatchers(HttpMethod.POST, "/api/workorders/**")
+                        .hasAuthority(Permission.WORKORDER_CREATE.name())
+
+                        .requestMatchers(HttpMethod.GET, "/api/workorders/**")
+                        .hasAuthority(Permission.WORKORDER_READ.name())
+
+                        .requestMatchers(HttpMethod.PUT, "/api/workorders/**")
+                        .hasAuthority(Permission.WORKORDER_UPDATE.name())
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/workorders/**")
+                        .hasAuthority(Permission.WORKORDER_DELETE.name())
+
                         .requestMatchers(HttpMethod.PATCH, "/api/workorders/*/assign")
                         .hasAuthority(Permission.WORKORDER_ASSIGN.name())
 
@@ -85,6 +97,19 @@ public class SecurityConfiguration {
 
                         .requestMatchers(HttpMethod.DELETE, "/api/sites/**")
                         .hasAuthority(Permission.SITE_DELETE.name())
+
+                        // Part APIs
+                        .requestMatchers(HttpMethod.POST, "/api/parts/**")
+                        .hasAuthority(Permission.PART_CREATE.name())
+
+                        .requestMatchers(HttpMethod.GET, "/api/parts/**")
+                        .hasAuthority(Permission.PART_READ.name())
+
+                        .requestMatchers(HttpMethod.PUT, "/api/parts/**")
+                        .hasAuthority(Permission.PART_UPDATE.name())
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/parts/**")
+                        .hasAuthority(Permission.PART_DELETE.name())
 
                         .anyRequest().authenticated()
                 )
