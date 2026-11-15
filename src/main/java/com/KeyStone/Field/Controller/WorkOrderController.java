@@ -2,10 +2,12 @@ package com.KeyStone.Field.Controller;
 
 import com.KeyStone.Field.DTO.AssignTechnicianRequest;
 import com.KeyStone.Field.DTO.CreateWorkOrderRequest;
+import com.KeyStone.Field.DTO.TechnicianStatusUpdateRequest;
 import com.KeyStone.Field.DTO.UpdateWorkOrderRequest;
 import com.KeyStone.Field.DTO.WorkOrderResponse;
 import com.KeyStone.Field.Service.WorkOrderService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +23,7 @@ public class WorkOrderController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public WorkOrderResponse createWorkOrder(
             @Valid @RequestBody CreateWorkOrderRequest request) {
 
@@ -45,7 +48,16 @@ public class WorkOrderController {
         return workOrderService.updateWorkOrder(id, request);
     }
 
+    @PatchMapping("/{id}/technician-status")
+    public WorkOrderResponse updateTechnicianStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody TechnicianStatusUpdateRequest request) {
+
+        return workOrderService.updateTechnicianStatus(id, request);
+    }
+
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteWorkOrder(@PathVariable Long id) {
         workOrderService.deleteWorkOrder(id);
     }

@@ -6,9 +6,10 @@ import com.KeyStone.Field.DTO.UpdateCustomerRequest;
 import com.KeyStone.Field.Entity.Customer;
 import com.KeyStone.Field.Exception.CustomerNotFoundException;
 import com.KeyStone.Field.Exception.DuplicateEmailException;
-import com.KeyStone.Field.Exception.UserNotFoundException;
 import com.KeyStone.Field.Repository.CustomerRepository;
+import com.KeyStone.Field.Repository.WorkOrderRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,15 +17,17 @@ import java.util.List;
 @Service
 public class CustomerService {
 
-
     private final CustomerRepository customerRepository;
+    private final WorkOrderRepository workOrderRepository;
 
-    public CustomerService(CustomerRepository customerRepository) {
+    public CustomerService(CustomerRepository customerRepository,
+                           WorkOrderRepository workOrderRepository) {
         this.customerRepository = customerRepository;
+        this.workOrderRepository = workOrderRepository;
     }
 
-    public CustomerResponse createCustomer(CreateCustomerRequest request){
-
+    @Transactional
+    public CustomerResponse createCustomer(CreateCustomerRequest request) {
         if (customerRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateEmailException();
         }
@@ -38,54 +41,38 @@ public class CustomerService {
         customer.setActive(true);
 
         Customer savedCustomer = customerRepository.save(customer);
-
-        return new CustomerResponse(
-                savedCustomer.getId(),
-                savedCustomer.getCompanyName(),
-                savedCustomer.getEmail(),
-                savedCustomer.getPhone(),
-                savedCustomer.getAddress(),
-                savedCustomer.getActive(),
-                savedCustomer.getCreatedAt()
-        );
-
-    }
-    public List<CustomerResponse> getAllCustomers(){
-      List<Customer> customers = customerRepository.findAll();
-
-      List<CustomerResponse> responseList = new ArrayList<>();
-      for(Customer customer : customers){
-          CustomerResponse response = new CustomerResponse(customer.getId(),
-                  customer.getCompanyName(),
-                  customer.getEmail(),
-                  customer.getPhone(),
-                  customer.getAddress(),
-                  customer.getActive(),
-                  customer.getCreatedAt());
-
-          responseList.add(response);
-      }
-
-      return responseList;
+        return mapToResponse(savedCustomer);
     }
 
-    public CustomerResponse getCustomerById(Long id){
-        Customer customer =  customerRepository.findById(id)
+    public List<CustomerResponse> getAllCustomers() {
+        List<Customer> customers = customerRepository.findAll();
+        List<CustomerResponse> responseList = new ArrayList<>();
+        for (Customer customer : customers) {
+            responseList.add(mapToResponse(customer));
+        }
+        return responseList;
+    }
+
+    public List<CustomerResponse> searchCustomers(String query) {
+        List<Customer> customers = (query == null || query.isBlank())
+                ? customerRepository.findAll()
+                : customerRepository.findByCompanyNameContainingIgnoreCase(query);
+
+        List<CustomerResponse> responseList = new ArrayList<>();
+        for (Customer customer : customers) {
+            responseList.add(mapToResponse(customer));
+        }
+        return responseList;
+    }
+
+    public CustomerResponse getCustomerById(Long id) {
+        Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerNotFoundException(id));
-
-        return new CustomerResponse(
-                customer.getId(),
-                customer.getCompanyName(),
-                customer.getEmail(),
-                customer.getPhone(),
-                customer.getAddress(),
-                customer.getActive(),
-                customer.getCreatedAt()
-        );
-
+        return mapToResponse(customer);
     }
 
-    public CustomerResponse updateCustomer(Long id, UpdateCustomerRequest request){
+    @Transactional
+    public CustomerResponse updateCustomer(Long id, UpdateCustomerRequest request) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerNotFoundException(id));
 
@@ -99,22 +86,33 @@ public class CustomerService {
         customer.setPhone(request.getPhone());
         customer.setContactPerson(request.getContactPerson());
 
-
         Customer updatedCustomer = customerRepository.save(customer);
-        return new CustomerResponse(
-                updatedCustomer.getId(),
-                updatedCustomer.getCompanyName(),
-                updatedCustomer.getEmail(),
-                updatedCustomer.getPhone(),
-                updatedCustomer.getAddress(),
-                updatedCustomer.getActive(),
-                updatedCustomer.getCreatedAt()
-        );
+        return mapToResponse(updatedCustomer);
     }
 
-    public void deleteCustomer(Long id){
+    @Transactional
+    public void deleteCustomer(Long id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerNotFoundException(id));
-        customerRepository.delete(customer);
+
+        // If customer has work orders, soft-delete to maintain history
+        if (workOrderRepository.existsByCustomer_Id(id)) {
+            customer.setActive(false);
+            customerRepository.save(customer);
+        } else {
+            customerRepository.delete(customer);
+        }
+    }
+
+    private CustomerResponse mapToResponse(Customer customer) {
+        return new CustomerResponse(
+                customer.getId(),
+                customer.getCompanyName(),
+                customer.getEmail(),
+                customer.getPhone(),
+                customer.getAddress(),
+                customer.getActive(),
+                customer.getCreatedAt()
+        );
     }
 }
