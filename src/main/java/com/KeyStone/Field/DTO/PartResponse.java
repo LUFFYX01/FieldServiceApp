@@ -26,5 +26,9 @@ public class PartResponse {
 
     private Boolean active;
 
+    private Integer lowStockThreshold;
+
+    private Boolean isLowStock;
+
     private LocalDateTime createdAt;
 }

@@ -1,0 +1,759 @@
+{
+  "info": {
+    "_postman_id": "keystone-fsm-api-collection",
+    "name": "KeyStone Field Service Management API",
+    "description": "Comprehensive Postman collection for testing the KeyStone FSM REST APIs, covering authentication, role workflows, work orders, field parts usage, and inventory management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"jwt_token\", jsonData.token);",
+                  "    console.log(\"Saved Admin JWT Token\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login as Dispatcher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"jwt_token\", jsonData.token);",
+                  "    console.log(\"Saved Dispatcher JWT Token\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{dispatcher_email}}\",\n  \"password\": \"{{dispatcher_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login as Technician",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"jwt_token\", jsonData.token);",
+                  "    console.log(\"Saved Technician JWT Token\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{technician_email}}\",\n  \"password\": \"{{technician_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Customers",
+      "item": [
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Search Customers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?search=Acme",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Acme"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"customerId\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Global Logistics Inc\",\n  \"contactPerson\": \"Sarah Jenkins\",\n  \"email\": \"sarah@globallogistics.com\",\n  \"phone\": \"5550198888\",\n  \"address\": \"742 Evergreen Terrace, Springfield\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Global Logistics Inc Updated\",\n  \"contactPerson\": \"Sarah Jenkins\",\n  \"email\": \"sarah@globallogistics.com\",\n  \"phone\": \"5550198888\",\n  \"address\": \"742 Evergreen Terrace, Suite 200\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Sites",
+      "item": [
+        {
+          "name": "Get All Sites",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/sites",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites"]
+            }
+          }
+        },
+        {
+          "name": "Get Sites by Customer",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/sites?customerId={{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites"],
+              "query": [
+                {
+                  "key": "customerId",
+                  "value": "{{customerId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Site by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/sites/{{siteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites", "{{siteId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Site",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"siteId\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"siteName\": \"Springfield Central Distribution\",\n  \"address\": \"100 Industrial Parkway, Dock 4\",\n  \"contactPerson\": \"Mike Vance\",\n  \"phone\": \"5550197777\",\n  \"customerId\": {{customerId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sites",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Master Parts & Inventory",
+      "item": [
+        {
+          "name": "Get All Parts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts"]
+            }
+          }
+        },
+        {
+          "name": "Search Parts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/parts?search=Filter",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Filter"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Low Stock Parts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/parts?lowStock=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts"],
+              "query": [
+                {
+                  "key": "lowStock",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Part by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/parts/{{partId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts", "{{partId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"partId\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"High Pressure Hydraulic Seal\",\n  \"partNumber\": \"SEAL-HP-900\",\n  \"description\": \"Reinforced nitrile seal for hydraulic pump assembly\",\n  \"quantity\": 25,\n  \"price\": 45.50,\n  \"lowStockThreshold\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts"]
+            }
+          }
+        },
+        {
+          "name": "Adjust Stock / Restock Part",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 40,\n  \"reason\": \"Received supplier shipment PO-2026-981\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/parts/{{partId}}/adjust-stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts", "{{partId}}", "adjust-stock"]
+            }
+          }
+        },
+        {
+          "name": "Get Part Transaction Audit Log",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/parts/{{partId}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "parts", "{{partId}}", "transactions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Work Orders",
+      "item": [
+        {
+          "name": "Get All Work Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders"]
+            }
+          }
+        },
+        {
+          "name": "Create Work Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"workOrderId\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cooling Fan Motor Replacement\",\n  \"description\": \"Bearing failure in main intake fan unit. Motor overheating.\",\n  \"priority\": \"HIGH\",\n  \"customerId\": {{customerId}},\n  \"siteId\": {{siteId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders"]
+            }
+          }
+        },
+        {
+          "name": "Get Work Order by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Assign Technician",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"technicianId\": {{technicianId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/assign",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "assign"]
+            }
+          }
+        },
+        {
+          "name": "Technician: Start Job (IN_PROGRESS)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"notes\": \"Arrived on site and commenced diagnostic teardown.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/technician-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "technician-status"]
+            }
+          }
+        },
+        {
+          "name": "Technician: Complete Job (COMPLETED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\",\n  \"notes\": \"Successfully replaced motor, tested load voltage, normal operating temp verified.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/technician-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "technician-status"]
+            }
+          }
+        },
+        {
+          "name": "Get Work Order History Audit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Field Parts & Usage (WorkOrderPart)",
+      "item": [
+        {
+          "name": "Add Required Part to Work Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partId\": {{partId}},\n  \"requiredQuantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "parts"]
+            }
+          }
+        },
+        {
+          "name": "Get Parts for Work Order",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "parts"]
+            }
+          }
+        },
+        {
+          "name": "Technician: Record Used Quantity (Inventory Decreases)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usedQuantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/parts/{{partId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "parts", "{{partId}}"]
+            }
+          }
+        },
+        {
+          "name": "Dispatcher: Update Required Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requiredQuantity\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/parts/{{partId}}/required-quantity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "parts", "{{partId}}", "required-quantity"]
+            }
+          }
+        },
+        {
+          "name": "Remove Part (Inventory Restores)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/workorders/{{workOrderId}}/parts/{{partId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workorders", "{{workOrderId}}", "parts", "{{partId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. User Management (Admin Only)",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Filter Users by Role",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users?role=TECHNICIAN",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "TECHNICIAN"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create New Technician User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"Alex Rivera\",\n  \"email\": \"alex.tech@keystone.com\",\n  \"role\": \"TECHNICIAN\",\n  \"password\": \"TechSecure123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Change User Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"NewTechPassword456!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{technicianId}}/password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{technicianId}}", "password"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

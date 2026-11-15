@@ -28,6 +28,10 @@ public enum Role {
             Permission.WORKORDER_DELETE,
             Permission.WORKORDER_ASSIGN,
 
+            Permission.WORKORDER_PART_READ,
+            Permission.WORKORDER_PART_ADD,
+            Permission.WORKORDER_PART_USE,
+
             Permission.SITE_CREATE,
             Permission.SITE_READ,
             Permission.SITE_UPDATE,
@@ -51,6 +55,9 @@ public enum Role {
             Permission.WORKORDER_UPDATE,
             Permission.WORKORDER_ASSIGN,
 
+            Permission.WORKORDER_PART_READ,
+            Permission.WORKORDER_PART_ADD,
+
             Permission.SITE_CREATE,
             Permission.SITE_READ,
             Permission.SITE_UPDATE,
@@ -64,6 +71,9 @@ public enum Role {
     TECHNICIAN(Set.of(
             Permission.WORKORDER_READ,
             Permission.WORKORDER_UPDATE,
+
+            Permission.WORKORDER_PART_READ,
+            Permission.WORKORDER_PART_USE,
 
             Permission.PART_READ
     ));

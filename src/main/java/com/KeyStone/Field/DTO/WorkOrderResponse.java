@@ -35,4 +35,6 @@ public class WorkOrderResponse {
     private Long siteId;
     private String siteName;
     private String siteAddress;
+
+    private Boolean isOverdue;
 }

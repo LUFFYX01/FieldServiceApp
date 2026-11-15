@@ -1,131 +1,112 @@
-export async function getWorkOrders(token: string) {
-    const response = await fetch(
-        "http://localhost:8080/api/workorders",
-        {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
+import { API_ENDPOINTS, authenticatedApiRequest } from "../config/api";
 
-    if (!response.ok) {
-        throw new Error("Failed to fetch work orders");
-    }
+export interface WorkOrder {
+  id: number;
+  title: string;
+  description: string;
+  status: "OPEN" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  customerId: number;
+  customerName: string;
+  siteId: number;
+  siteName: string;
+  siteAddress: string;
+  technicianId: number | null;
+  technicianName: string | null;
+  createdAt: string;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  notes: string | null;
+  isOverdue?: boolean;
+}
 
-    return response.json();
+export interface CreateWorkOrderData {
+  title: string;
+  description: string;
+  priority: string;
+  customerId: number;
+  siteId: number;
+}
+
+export interface UpdateWorkOrderData {
+  status?: string;
+  priority?: string;
+  scheduledDate?: string | null;
+  completedDate?: string | null;
+  notes?: string;
+}
+
+export interface TechnicianStatusData {
+  status: "IN_PROGRESS" | "COMPLETED";
+  notes?: string;
+}
+
+export async function getWorkOrders(token: string): Promise<WorkOrder[]> {
+  return authenticatedApiRequest<WorkOrder[]>(API_ENDPOINTS.WORK_ORDERS.BASE, token);
+}
+
+export async function getWorkOrderById(token: string, id: number): Promise<WorkOrder> {
+  return authenticatedApiRequest<WorkOrder>(API_ENDPOINTS.WORK_ORDERS.BY_ID(id), token);
 }
 
 export async function createWorkOrder(
-    token: string,
-    workOrder: {
-        title: string;
-        description: string;
-        priority: string;
-        customerId: number;
-        siteId: number;
-    }
-) {
-    const response = await fetch(
-        "http://localhost:8080/api/workorders",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(workOrder),
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to create work order");
-    }
-
-    return response.json();
+  token: string,
+  workOrder: CreateWorkOrderData
+): Promise<WorkOrder> {
+  return authenticatedApiRequest<WorkOrder>(API_ENDPOINTS.WORK_ORDERS.BASE, token, {
+    method: "POST",
+    body: JSON.stringify(workOrder),
+  });
 }
 
 export async function updateWorkOrder(
-    token: string,
-    id: number,
-    workOrder: {
-        status: string;
-        priority: string;
-        scheduledDate: string | null;
-        completedDate: string | null;
-        notes: string;
-    }
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/workorders/${id}`,
-        {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(workOrder),
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to update work order");
-    }
-
-    return response.json();
+  token: string,
+  id: number,
+  workOrder: UpdateWorkOrderData
+): Promise<WorkOrder> {
+  return authenticatedApiRequest<WorkOrder>(API_ENDPOINTS.WORK_ORDERS.BY_ID(id), token, {
+    method: "PUT",
+    body: JSON.stringify(workOrder),
+  });
 }
 
-export async function deleteWorkOrder(
-    token: string,
-    id: number
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/workorders/${id}`,
-        {
-            method: "DELETE",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to delete work order");
+export async function updateTechnicianStatus(
+  token: string,
+  id: number,
+  data: TechnicianStatusData
+): Promise<WorkOrder> {
+  return authenticatedApiRequest<WorkOrder>(
+    API_ENDPOINTS.WORK_ORDERS.TECHNICIAN_STATUS(id),
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
     }
+  );
 }
 
 export async function assignTechnician(
-    token: string,
-    workOrderId: number,
-    technicianId: number
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/workorders/${workOrderId}/assign`,
-        {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                technicianId,
-            }),
-        }
-    );
+  token: string,
+  workOrderId: number,
+  technicianIdOrPayload: number | { technicianId: number | null }
+): Promise<WorkOrder> {
+  const payload =
+    typeof technicianIdOrPayload === "object"
+      ? technicianIdOrPayload
+      : { technicianId: technicianIdOrPayload };
 
-    if (!response.ok) {
-        const errorText = await response.text();
-
-        console.error(
-            "Assign technician failed:",
-            response.status,
-            errorText
-        );
-
-        throw new Error(
-            `Failed to assign technician: ${response.status}`
-        );
+  return authenticatedApiRequest<WorkOrder>(
+    API_ENDPOINTS.WORK_ORDERS.ASSIGN(workOrderId),
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
     }
+  );
+}
 
-    return response.json();
+export async function deleteWorkOrder(token: string, id: number): Promise<void> {
+  return authenticatedApiRequest<void>(API_ENDPOINTS.WORK_ORDERS.BY_ID(id), token, {
+    method: "DELETE",
+  });
 }

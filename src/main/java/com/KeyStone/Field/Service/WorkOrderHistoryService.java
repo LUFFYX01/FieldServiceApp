@@ -1,11 +1,14 @@
 package com.KeyStone.Field.Service;
 
 import com.KeyStone.Field.DTO.WorkOrderHistoryResponse;
+import com.KeyStone.Field.Entity.User;
 import com.KeyStone.Field.Entity.WorkOrder;
 import com.KeyStone.Field.Entity.WorkOrderHistory;
 import com.KeyStone.Field.Exception.WorkOrderNotFoundException;
 import com.KeyStone.Field.Repository.WorkOrderHistoryRepository;
 import com.KeyStone.Field.Repository.WorkOrderRepository;
+import com.KeyStone.Field.Security.SecurityUtils;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,45 +28,36 @@ public class WorkOrderHistoryService {
         this.workOrderRepository = workOrderRepository;
     }
 
-    public List<WorkOrderHistoryResponse> getHistory(
-            Long workOrderId) {
-
-        // First verify that the Work Order exists
+    public List<WorkOrderHistoryResponse> getHistory(Long workOrderId) {
         WorkOrder workOrder =
                 workOrderRepository.findById(workOrderId)
                         .orElseThrow(() ->
-                                new WorkOrderNotFoundException(
-                                        workOrderId
-                                ));
+                                new WorkOrderNotFoundException(workOrderId));
+
+        if (SecurityUtils.isCurrentUserTechnician()) {
+            User currentUser = SecurityUtils.getCurrentUser().orElse(null);
+            if (currentUser != null) {
+                if (workOrder.getAssignedTechnician() == null ||
+                        !workOrder.getAssignedTechnician().getId().equals(currentUser.getId())) {
+                    throw new AccessDeniedException("You do not have permission to view this work order's history");
+                }
+            }
+        }
 
         List<WorkOrderHistory> historyList =
-                historyRepository
-                        .findByWorkOrderIdOrderByCreatedAtAsc(
-                                workOrder.getId()
-                        );
+                historyRepository.findByWorkOrderIdOrderByCreatedAtAsc(workOrder.getId());
 
-        List<WorkOrderHistoryResponse> responseList =
-                new ArrayList<>();
-
+        List<WorkOrderHistoryResponse> responseList = new ArrayList<>();
         for (WorkOrderHistory history : historyList) {
-
-            WorkOrderHistoryResponse response =
+            responseList.add(
                     WorkOrderHistoryResponse.builder()
                             .id(history.getId())
-                            .workOrderId(
-                                    history.getWorkOrder()
-                                            .getId()
-                            )
+                            .workOrderId(history.getWorkOrder().getId())
                             .status(history.getStatus())
-                            .description(
-                                    history.getDescription()
-                            )
-                            .createdAt(
-                                    history.getCreatedAt()
-                            )
-                            .build();
-
-            responseList.add(response);
+                            .description(history.getDescription())
+                            .createdAt(history.getCreatedAt())
+                            .build()
+            );
         }
 
         return responseList;

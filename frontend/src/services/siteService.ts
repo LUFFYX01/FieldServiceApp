@@ -1,95 +1,65 @@
-export async function getSites(token: string) {
-    const response = await fetch(
-        "http://localhost:8080/api/sites",
-        {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
+import { API_ENDPOINTS, authenticatedApiRequest } from "../config/api";
 
-    if (!response.ok) {
-        throw new Error("Failed to fetch sites");
-    }
-
-    return response.json();
+export interface Site {
+  id: number;
+  siteName: string;
+  address: string;
+  contactPerson: string;
+  phone: string;
+  customerId: number;
+  customerName?: string;
+  active: boolean;
+  createdAt?: string;
 }
 
-export async function createSite(
-    token: string,
-    site: {
-        siteName: string;
-        address: string;
-        contactPerson: string;
-        phone: string;
-        customerId: number;
-    }
-) {
-    const response = await fetch(
-        "http://localhost:8080/api/sites",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(site),
-        }
-    );
+export interface CreateSiteData {
+  siteName: string;
+  address: string;
+  contactPerson: string;
+  phone: string;
+  customerId: number;
+}
 
-    if (!response.ok) {
-        throw new Error("Failed to create site");
-    }
+export interface UpdateSiteData {
+  siteName: string;
+  address: string;
+  contactPerson: string;
+  phone: string;
+  active: boolean;
+}
 
-    return response.json();
+export async function getSites(token: string, customerId?: number): Promise<Site[]> {
+  let url = API_ENDPOINTS.SITES.BASE;
+  if (customerId) {
+    url += `?customerId=${customerId}`;
+  }
+  return authenticatedApiRequest<Site[]>(url, token);
+}
+
+export async function getSiteById(token: string, id: number): Promise<Site> {
+  return authenticatedApiRequest<Site>(API_ENDPOINTS.SITES.BY_ID(id), token);
+}
+
+export async function createSite(token: string, site: CreateSiteData): Promise<Site> {
+  return authenticatedApiRequest<Site>(API_ENDPOINTS.SITES.BASE, token, {
+    method: "POST",
+    body: JSON.stringify(site),
+  });
 }
 
 export async function updateSite(
-    token: string,
-    id: number,
-    site: {
-        siteName: string;
-        address: string;
-        contactPerson: string;
-        phone: string;
-        active: boolean;
-    }
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/sites/${id}`,
-        {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(site),
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to update site");
-    }
-
-    return response.json();
+  token: string,
+  id: number,
+  site: UpdateSiteData
+): Promise<Site> {
+  return authenticatedApiRequest<Site>(API_ENDPOINTS.SITES.BY_ID(id), token, {
+    method: "PUT",
+    body: JSON.stringify(site),
+  });
 }
 
-export async function deleteSite(
-    token: string,
-    id: number
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/sites/${id}`,
-        {
-            method: "DELETE",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to delete site");
-    }
+export async function deleteSite(token: string, id: number): Promise<void> {
+  return authenticatedApiRequest<void>(API_ENDPOINTS.SITES.BY_ID(id), token, {
+    method: "DELETE",
+  });
 }

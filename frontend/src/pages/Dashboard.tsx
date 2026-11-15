@@ -1,121 +1,76 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getCustomers } from "../services/customerService";
 import { getSites } from "../services/siteService";
-import { getWorkOrders } from "../services/workOrderService";
+import { getWorkOrders, type WorkOrder } from "../services/workOrderService";
 import { getUsers } from "../services/userService";
-import { Link } from "react-router-dom";
-
-type DashboardStats = {
-  totalCustomers: number;
-  totalSites: number;
-  totalWorkOrders: number;
-  totalUsers: number;
-  activeWorkOrders: number;
-  completedWorkOrders: number;
-  pendingWorkOrders: number;
-};
-
-type RecentWorkOrder = {
-  id: number;
-  title: string;
-  status: string;
-  priority: string;
-  customerName: string;
-  createdAt: string;
-};
+import { getParts, type Part } from "../services/partService";
 
 function Dashboard() {
-  const { token } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCustomers: 0,
-    totalSites: 0,
-    totalWorkOrders: 0,
-    totalUsers: 0,
-    activeWorkOrders: 0,
-    completedWorkOrders: 0,
-    pendingWorkOrders: 0,
-  });
-  const [recentWorkOrders, setRecentWorkOrders] = useState<RecentWorkOrder[]>([]);
+  const { token, user, isAdmin, isDispatcher, isTechnician } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [customerCount, setCustomerCount] = useState(0);
+  const [siteCount, setSiteCount] = useState(0);
+  const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
     if (!token) return;
 
-    const loadDashboardData = async () => {
+    const loadData = async () => {
+      setLoading(true);
+      setError("");
+
       try {
-        const [customers, sites, workOrders, users] = await Promise.all([
-          getCustomers(token),
-          getSites(token),
-          getWorkOrders(token),
-          getUsers(token),
-        ]);
+        const promises: Promise<any>[] = [getWorkOrders(token)];
 
-        const activeWorkOrders = workOrders.filter(
-          (wo: any) => wo.status === "IN_PROGRESS" || wo.status === "ASSIGNED"
-        ).length;
-        const completedWorkOrders = workOrders.filter(
-          (wo: any) => wo.status === "COMPLETED"
-        ).length;
-        const pendingWorkOrders = workOrders.filter(
-          (wo: any) => wo.status === "OPEN"
-        ).length;
+        if (isAdmin || isDispatcher) {
+          promises.push(getCustomers(token));
+          promises.push(getSites(token));
+          promises.push(getParts(token));
+        }
 
-        setStats({
-          totalCustomers: customers.length,
-          totalSites: sites.length,
-          totalWorkOrders: workOrders.length,
-          totalUsers: users.length,
-          activeWorkOrders,
-          completedWorkOrders,
-          pendingWorkOrders,
-        });
+        if (isAdmin) {
+          promises.push(getUsers(token));
+        }
 
-        // Get recent work orders (last 5)
-        const recent = workOrders
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5);
-        setRecentWorkOrders(recent);
+        const results = await Promise.all(promises);
 
-      } catch (error) {
-        console.error(error);
+        const woData: WorkOrder[] = results[0] || [];
+        setWorkOrders(woData);
+
+        if (isAdmin || isDispatcher) {
+          setCustomerCount(results[1]?.length || 0);
+          setSiteCount(results[2]?.length || 0);
+          setParts(results[3] || []);
+        }
+
+        if (isAdmin) {
+          setUserCount(results[4]?.length || 0);
+        }
+      } catch (err: any) {
+        console.error(err);
         setError("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
     };
 
-    loadDashboardData();
-  }, [token]);
+    loadData();
+  }, [token, isAdmin, isDispatcher]);
 
-  const StatCard = ({ title, value, icon, color, link }: any) => (
-    <Link to={link || "#"} className="card" style={{ textDecoration: "none", color: "inherit" }}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-            {title}
-          </p>
-          <h3 style={{ fontSize: "2rem", fontWeight: "700", margin: 0, color: "#1a1a1a" }}>
-            {value}
-          </h3>
-        </div>
-        <div style={{
-          width: "48px",
-          height: "48px",
-          borderRadius: "8px",
-          backgroundColor: "#f0f0f0",
-          border: "1px solid #e0e0e0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#1a1a1a"
-        }}>
-          {icon}
-        </div>
-      </div>
-    </Link>
+  const activeWorkOrders = workOrders.filter(
+    (wo) => wo.status === "IN_PROGRESS" || wo.status === "ASSIGNED"
   );
+  const pendingWorkOrders = workOrders.filter((wo) => wo.status === "OPEN");
+  const completedWorkOrders = workOrders.filter((wo) => wo.status === "COMPLETED");
+  const overdueWorkOrders = workOrders.filter((wo) => Boolean(wo.isOverdue));
+  const lowStockParts = parts.filter((p) => p.isLowStock && p.active);
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { color: string; label: string }> = {
@@ -125,8 +80,8 @@ function Dashboard() {
       COMPLETED: { color: "success", label: "Completed" },
       CANCELLED: { color: "danger", label: "Cancelled" },
     };
-    const statusInfo = statusMap[status] || { color: "secondary", label: status };
-    return <span className={`badge badge-${statusInfo.color}`}>{statusInfo.label}</span>;
+    const s = statusMap[status] || { color: "secondary", label: status };
+    return <span className={`badge badge-${s.color}`}>{s.label}</span>;
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -136,9 +91,66 @@ function Dashboard() {
       HIGH: { color: "warning", label: "High" },
       URGENT: { color: "danger", label: "Urgent" },
     };
-    const priorityInfo = priorityMap[priority] || { color: "secondary", label: priority };
-    return <span className={`badge badge-${priorityInfo.color}`}>{priorityInfo.label}</span>;
+    const p = priorityMap[priority] || { color: "secondary", label: priority };
+    return <span className={`badge badge-${p.color}`}>{p.label}</span>;
   };
+
+  const StatCard = ({
+    title,
+    value,
+    icon,
+    link,
+    alert,
+  }: {
+    title: string;
+    value: number;
+    icon: React.ReactNode;
+    link?: string;
+    alert?: boolean;
+  }) => (
+    <Link
+      to={link || "#"}
+      className="card"
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        borderLeft: alert ? "4px solid var(--danger-color)" : undefined,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+            {title}
+          </p>
+          <h3
+            style={{
+              fontSize: "2rem",
+              fontWeight: 700,
+              margin: 0,
+              color: alert ? "var(--danger-color)" : "#1a1a1a",
+            }}
+          >
+            {value}
+          </h3>
+        </div>
+        <div
+          style={{
+            width: "48px",
+            height: "48px",
+            borderRadius: "8px",
+            backgroundColor: alert ? "#fee2e2" : "#f0f0f0",
+            border: "1px solid #e0e0e0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: alert ? "var(--danger-color)" : "#1a1a1a",
+          }}
+        >
+          {icon}
+        </div>
+      </div>
+    </Link>
+  );
 
   if (loading) {
     return (
@@ -160,123 +172,195 @@ function Dashboard() {
 
   return (
     <div className="fade-in">
+      {/* Technician specific banner */}
+      {isTechnician && (
+        <div className="card mb-4" style={{ backgroundColor: "#eff6ff", borderColor: "#bfdbfe" }}>
+          <div className="card-body flex items-center justify-between">
+            <div>
+              <h3 style={{ margin: "0 0 0.5rem 0", color: "#1e3a8a" }}>
+                Welcome, {user?.email}
+              </h3>
+              <p style={{ margin: 0, color: "#1e40af" }}>
+                You have <strong>{activeWorkOrders.length}</strong> active job(s) assigned to you. Review your assigned work orders and record parts usage below.
+              </p>
+            </div>
+            <Link to="/workorders" className="btn btn-primary">
+              View My Jobs
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-4 mb-6">
         <StatCard
-          title="Total Customers"
-          value={stats.totalCustomers}
-          link="/customers"
-          color="primary"
-          icon={
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-          }
-        />
-        <StatCard
-          title="Total Sites"
-          value={stats.totalSites}
-          link="/sites"
-          color="success"
-          icon={
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
-          }
-        />
-        <StatCard
-          title="Total Work Orders"
-          value={stats.totalWorkOrders}
+          title={isTechnician ? "Assigned To Me" : "Total Work Orders"}
+          value={workOrders.length}
           link="/workorders"
-          color="warning"
           icon={
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
             </svg>
           }
         />
+
         <StatCard
-          title="Total Users"
-          value={stats.totalUsers}
-          color="secondary"
+          title="In Progress / Active"
+          value={activeWorkOrders.length}
+          link="/workorders"
           icon={
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          }
+        />
+
+        <StatCard
+          title={isTechnician ? "Completed By Me" : "Completed Jobs"}
+          value={completedWorkOrders.length}
+          link="/workorders"
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          }
+        />
+
+        <StatCard
+          title="Overdue / Urgent"
+          value={overdueWorkOrders.length}
+          link="/workorders"
+          alert={overdueWorkOrders.length > 0}
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           }
         />
       </div>
 
-      {/* Work Order Status */}
-      <div className="grid grid-3 mb-6">
-        <div className="card">
-          <div className="card-header">
-            <h4 className="card-title">Active Work Orders</h4>
-          </div>
-          <div className="card-body">
-            <h2 style={{ fontSize: "2.5rem", fontWeight: "700", color: "#1a1a1a", margin: 0 }}>
-              {stats.activeWorkOrders}
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-              Currently in progress or assigned
-            </p>
-          </div>
+      {/* Admin / Dispatcher Operational Counters */}
+      {(isAdmin || isDispatcher) && (
+        <div className="grid grid-4 mb-6">
+          <StatCard
+            title="Customers"
+            value={customerCount}
+            link="/customers"
+            icon={
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+              </svg>
+            }
+          />
+          <StatCard
+            title="Service Sites"
+            value={siteCount}
+            link="/sites"
+            icon={
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            }
+          />
+          <StatCard
+            title="Parts In Catalog"
+            value={parts.length}
+            link="/parts"
+            icon={
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+              </svg>
+            }
+          />
+          {isAdmin ? (
+            <StatCard
+              title="System Users"
+              value={userCount}
+              link="/users"
+              icon={
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                </svg>
+              }
+            />
+          ) : (
+            <StatCard
+              title="Unassigned (Open)"
+              value={pendingWorkOrders.length}
+              link="/workorders"
+              alert={pendingWorkOrders.length > 0}
+              icon={
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                </svg>
+              }
+            />
+          )}
         </div>
-        <div className="card">
-          <div className="card-header">
-            <h4 className="card-title">Pending Work Orders</h4>
-          </div>
-          <div className="card-body">
-            <h2 style={{ fontSize: "2.5rem", fontWeight: "700", color: "#1a1a1a", margin: 0 }}>
-              {stats.pendingWorkOrders}
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-              Awaiting assignment
-            </p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-header">
-            <h4 className="card-title">Completed Work Orders</h4>
-          </div>
-          <div className="card-body">
-            <h2 style={{ fontSize: "2.5rem", fontWeight: "700", color: "#1a1a1a", margin: 0 }}>
-              {stats.completedWorkOrders}
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-              Successfully completed
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Recent Work Orders */}
-      <div className="card">
-        <div className="card-header">
-          <h4 className="card-title">Recent Work Orders</h4>
+      {/* Low Stock Warning Banner for Admin/Dispatcher */}
+      {(isAdmin || isDispatcher) && lowStockParts.length > 0 && (
+        <div className="card mb-6" style={{ borderLeft: "4px solid var(--warning-color)" }}>
+          <div className="card-header flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: "1.25rem" }}>⚠️</span>
+              <h4 className="card-title" style={{ margin: 0 }}>
+                Inventory Alert: {lowStockParts.length} Part(s) Low on Stock
+              </h4>
+            </div>
+            <Link to="/parts" className="btn btn-secondary btn-sm">
+              Manage Inventory
+            </Link>
+          </div>
+          <div className="card-body">
+            <div className="flex gap-2" style={{ flexWrap: "wrap" }}>
+              {lowStockParts.map((p) => (
+                <span key={p.id} className="badge badge-warning" style={{ padding: "0.5rem 0.75rem" }}>
+                  {p.name} ({p.partNumber}): {p.quantity} left (threshold: {p.lowStockThreshold})
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent / Active Work Orders Table */}
+      <div className="card mb-6">
+        <div className="card-header flex items-center justify-between">
+          <h4 className="card-title">
+            {isTechnician ? "My Active Tasks" : isDispatcher ? "Pending & Active Work Orders" : "Recent Work Orders"}
+          </h4>
           <Link to="/workorders" className="btn btn-secondary btn-sm">
             View All
           </Link>
         </div>
+
         <div className="card-body">
-          {recentWorkOrders.length === 0 ? (
+          {workOrders.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">📋</div>
-              <h4 className="empty-state-title">No work orders yet</h4>
+              <h4 className="empty-state-title">No work orders found</h4>
               <p className="empty-state-description">
-                Create your first work order to get started
+                {isTechnician
+                  ? "You have no work orders assigned right now."
+                  : "Create a work order to begin dispatching."}
               </p>
-              <Link to="/workorders" className="btn btn-primary">
-                Create Work Order
-              </Link>
+              {!isTechnician && (
+                <Link to="/workorders" className="btn btn-primary">
+                  Create Work Order
+                </Link>
+              )}
             </div>
           ) : (
             <div className="table-container">
@@ -285,27 +369,44 @@ function Dashboard() {
                   <tr>
                     <th>Title</th>
                     <th>Customer</th>
+                    <th>Site</th>
                     <th>Status</th>
                     <th>Priority</th>
-                    <th>Created</th>
+                    <th>Technician</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentWorkOrders.map((workOrder) => (
-                    <tr key={workOrder.id}>
+                  {workOrders.slice(0, 6).map((wo) => (
+                    <tr key={wo.id}>
                       <td>
                         <Link
-                          to="/workorders"
-                          style={{ fontWeight: "500", color: "#1a1a1a", textDecoration: "none" }}
+                          to={`/workorders/${wo.id}`}
+                          style={{ fontWeight: 600, color: "#2563eb", textDecoration: "none" }}
                         >
-                          {workOrder.title}
+                          {wo.title}
                         </Link>
+                        {wo.isOverdue && (
+                          <span className="badge badge-danger ml-2" style={{ fontSize: "0.7rem" }}>
+                            OVERDUE
+                          </span>
+                        )}
                       </td>
-                      <td>{workOrder.customerName}</td>
-                      <td>{getStatusBadge(workOrder.status)}</td>
-                      <td>{getPriorityBadge(workOrder.priority)}</td>
-                      <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                        {new Date(workOrder.createdAt).toLocaleDateString()}
+                      <td>{wo.customerName}</td>
+                      <td>{wo.siteName}</td>
+                      <td>{getStatusBadge(wo.status)}</td>
+                      <td>{getPriorityBadge(wo.priority)}</td>
+                      <td>
+                        {wo.technicianName ? (
+                          <span className="badge badge-secondary">{wo.technicianName}</span>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>Unassigned</span>
+                        )}
+                      </td>
+                      <td>
+                        <Link to={`/workorders/${wo.id}`} className="btn btn-secondary btn-sm">
+                          {isTechnician ? "Open Job" : "Details"}
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -317,38 +418,35 @@ function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="card mt-4">
+      <div className="card">
         <div className="card-header">
-          <h4 className="card-title">Quick Actions</h4>
+          <h4 className="card-title">Quick Operations</h4>
         </div>
         <div className="card-body">
-          <div className="flex gap-3">
-            <Link to="/customers" className="btn btn-primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                <circle cx="8.5" cy="7" r="4"/>
-                <line x1="20" y1="8" x2="20" y2="14"/>
-                <line x1="23" y1="11" x2="17" y2="11"/>
-              </svg>
-              Add Customer
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
+            <Link to="/workorders" className="btn btn-primary">
+              📋 {isTechnician ? "View My Work Orders" : "Manage Work Orders"}
             </Link>
-            <Link to="/sites" className="btn btn-success">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                <circle cx="12" cy="10" r="3"/>
-                <line x1="12" y1="21" x2="12" y2="21"/>
-              </svg>
-              Add Site
-            </Link>
-            <Link to="/workorders" className="btn btn-warning">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="12" y1="18" x2="12" y2="12"/>
-                <line x1="9" y1="15" x2="15" y2="15"/>
-              </svg>
-              Create Work Order
-            </Link>
+
+            {(isAdmin || isDispatcher) && (
+              <>
+                <Link to="/parts" className="btn btn-secondary">
+                  🔩 Parts Catalog & Stock
+                </Link>
+                <Link to="/customers" className="btn btn-secondary">
+                  🏢 Customers
+                </Link>
+                <Link to="/sites" className="btn btn-secondary">
+                  📍 Service Sites
+                </Link>
+              </>
+            )}
+
+            {isAdmin && (
+              <Link to="/users" className="btn btn-secondary">
+                👥 System Users
+              </Link>
+            )}
           </div>
         </div>
       </div>

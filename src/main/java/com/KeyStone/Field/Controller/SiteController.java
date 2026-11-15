@@ -5,6 +5,7 @@ import com.KeyStone.Field.DTO.SiteResponse;
 import com.KeyStone.Field.DTO.UpdateSiteRequest;
 import com.KeyStone.Field.Service.SiteService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class SiteController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public SiteResponse createSite(
             @Valid @RequestBody CreateSiteRequest request) {
 
@@ -27,8 +29,12 @@ public class SiteController {
     }
 
     @GetMapping
-    public List<SiteResponse> getAllSites() {
+    public List<SiteResponse> getAllSites(
+            @RequestParam(required = false) Long customerId) {
 
+        if (customerId != null) {
+            return siteService.getSitesByCustomerId(customerId);
+        }
         return siteService.getAllSites();
     }
 
@@ -47,6 +53,7 @@ public class SiteController {
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteSite(@PathVariable Long id) {
 
         siteService.deleteSite(id);

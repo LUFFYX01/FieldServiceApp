@@ -2,6 +2,8 @@ package com.KeyStone.Field.DTO;
 
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,4 +19,8 @@ public class WorkOrderPartResponse {
 
     private Integer requiredQuantity;
     private Integer usedQuantity;
+
+    private BigDecimal unitPrice;
+    private Integer availableStock;
+    private BigDecimal lineTotal;
 }

@@ -1,89 +1,64 @@
-export async function getCustomers(token: string) {
-    const response = await fetch("http://localhost:8080/api/customers", {
-        method: "GET",
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+import { API_ENDPOINTS, authenticatedApiRequest } from "../config/api";
 
-    if (!response.ok) {
-        throw new Error("Failed to fetch customers");
-    }
-
-    return response.json();
+export interface Customer {
+  id: number;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  active: boolean;
+  createdAt?: string;
 }
-export async function createCustomer(
-    token: string,
-    customer: {
-        companyName: string;
-        contactPerson: string;
-        email: string;
-        phone: string;
-        address: string;
-        active: boolean;
-    }
-) {
-    const response = await fetch("http://localhost:8080/api/customers", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(customer),
-    });
 
-    if (!response.ok) {
-        throw new Error("Failed to create customer");
-    }
-
-    return response.json();
+export interface CreateCustomerData {
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address?: string;
 }
+
+export interface UpdateCustomerData {
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address?: string;
+}
+
+export async function getCustomers(token: string, search?: string): Promise<Customer[]> {
+  let url = API_ENDPOINTS.CUSTOMERS.BASE;
+  if (search) {
+    url += `?search=${encodeURIComponent(search)}`;
+  }
+  return authenticatedApiRequest<Customer[]>(url, token);
+}
+
+export async function getCustomerById(token: string, id: number): Promise<Customer> {
+  return authenticatedApiRequest<Customer>(API_ENDPOINTS.CUSTOMERS.BY_ID(id), token);
+}
+
+export async function createCustomer(token: string, customer: CreateCustomerData): Promise<Customer> {
+  return authenticatedApiRequest<Customer>(API_ENDPOINTS.CUSTOMERS.BASE, token, {
+    method: "POST",
+    body: JSON.stringify(customer),
+  });
+}
+
 export async function updateCustomer(
-    token: string,
-    id: number,
-    customer: {
-        companyName: string;
-        contactPerson: string;
-        email: string;
-        phone: string;
-        address: string;
-        active: boolean;
-    }
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/customers/${id}`,
-        {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(customer),
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to update customer");
-    }
-
-    return response.json();
+  token: string,
+  id: number,
+  customer: UpdateCustomerData
+): Promise<Customer> {
+  return authenticatedApiRequest<Customer>(API_ENDPOINTS.CUSTOMERS.BY_ID(id), token, {
+    method: "PUT",
+    body: JSON.stringify(customer),
+  });
 }
 
-export async function deleteCustomer(
-    token: string,
-    id: number
-) {
-    const response = await fetch(
-        `http://localhost:8080/api/customers/${id}`,
-        {
-            method: "DELETE",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to delete customer");
-    }
+export async function deleteCustomer(token: string, id: number): Promise<void> {
+  return authenticatedApiRequest<void>(API_ENDPOINTS.CUSTOMERS.BY_ID(id), token, {
+    method: "DELETE",
+  });
 }

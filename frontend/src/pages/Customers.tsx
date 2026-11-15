@@ -6,18 +6,8 @@ import {
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  type Customer,
 } from "../services/customerService";
-
-type Customer = {
-  id: number;
-  companyName: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  address: string;
-  active: boolean;
-  createdAt: string;
-};
 
 const emptyForm = {
   companyName: "",
@@ -106,6 +96,7 @@ function Customers() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!token) return;
     setSubmitting(true);
 
     try {
@@ -135,6 +126,7 @@ function Customers() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!token) return;
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
 
     try {

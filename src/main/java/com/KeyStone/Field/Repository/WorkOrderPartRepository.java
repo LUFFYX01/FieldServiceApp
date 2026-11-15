@@ -17,4 +17,6 @@ public interface WorkOrderPartRepository
             WorkOrder workOrder,
             Part part
     );
+
+    boolean existsByPart_Id(Long partId);
 }

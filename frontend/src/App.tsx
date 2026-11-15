@@ -5,57 +5,100 @@ import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Sites from "./pages/Sites";
 import WorkOrders from "./pages/WorkOrders";
+import WorkOrderDetails from "./pages/WorkOrderDetails";
+import Parts from "./pages/Parts";
+import Users from "./pages/Users";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
 
-                <Route path="/login" element={<Login />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-                <Route
-                    path="/dashboard"
-                    element={
-                        <ProtectedRoute>
-                            <Layout><Dashboard /></Layout>
-                        </ProtectedRoute>
-                    }
-                />
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "DISPATCHER"]}>
+              <Layout>
+                <Customers />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-                <Route
-                    path="/customers"
-                    element={
-                        <ProtectedRoute>
-                            <Layout><Customers /></Layout>
-                        </ProtectedRoute>
-                    }
-                />
+        <Route
+          path="/sites"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "DISPATCHER"]}>
+              <Layout>
+                <Sites />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-                <Route
-                    path="/sites"
-                    element={
-                        <ProtectedRoute>
-                            <Layout><Sites /></Layout>
-                        </ProtectedRoute>
-                    }
-                />
+        <Route
+          path="/workorders"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkOrders />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-                <Route
-                    path="/workorders"
-                    element={
-                        <ProtectedRoute>
-                            <Layout><WorkOrders /></Layout>
-                        </ProtectedRoute>
-                    }
-                />
+        <Route
+          path="/workorders/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkOrderDetails />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/parts"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN", "DISPATCHER"]}>
+              <Layout>
+                <Parts />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-            </Routes>
-        </BrowserRouter>
-    );
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Layout>
+                <Users />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;

@@ -6,24 +6,13 @@ import {
   createSite,
   updateSite,
   deleteSite,
+  type Site,
 } from "../services/siteService";
 import { getCustomers } from "../services/customerService";
 
 type Customer = {
   id: number;
   companyName: string;
-};
-
-type Site = {
-  id: number;
-  siteName: string;
-  address: string;
-  contactPerson: string;
-  phone: string;
-  active: boolean;
-  customerId: number;
-  customerName: string;
-  createdAt: string;
 };
 
 const emptyForm = {
@@ -72,7 +61,7 @@ function Sites() {
         (site) =>
           site.siteName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           site.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          site.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+          (site.customerName && site.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredSites(filtered);
     } else {
@@ -115,6 +104,7 @@ function Sites() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!token) return;
     setSubmitting(true);
 
     try {
@@ -153,6 +143,7 @@ function Sites() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!token) return;
     if (!window.confirm("Are you sure you want to delete this site?")) return;
 
     try {

@@ -1,63 +1,17 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import {
   getWorkOrders,
   createWorkOrder,
-  updateWorkOrder,
   deleteWorkOrder,
   assignTechnician,
+  type WorkOrder,
 } from "../services/workOrderService";
-import { getCustomers } from "../services/customerService";
-import { getSites } from "../services/siteService";
-import { getUsers } from "../services/userService";
-import { getWorkOrderHistory } from "../services/workOrderHistoryService";
-
-type Customer = {
-  id: number;
-  companyName: string;
-};
-
-type Site = {
-  id: number;
-  siteName: string;
-  customerId: number;
-};
-
-type User = {
-  id: number;
-  userName: string;
-  email: string;
-  role: string;
-  active: boolean;
-};
-
-type WorkOrder = {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  customerId: number;
-  customerName: string;
-  siteId: number;
-  siteName: string;
-  siteAddress: string;
-  technicianId: number | null;
-  technicianName: string | null;
-  createdAt: string;
-  scheduledDate: string | null;
-  completedDate: string | null;
-  notes: string | null;
-};
-
-type WorkOrderHistory = {
-  id: number;
-  workOrderId: number;
-  status: string;
-  description: string;
-  createdAt: string;
-};
+import { getCustomers, type Customer } from "../services/customerService";
+import { getSites, type Site } from "../services/siteService";
+import { getUsers, type User } from "../services/userService";
 
 const emptyForm = {
   title: "",
@@ -67,17 +21,10 @@ const emptyForm = {
   siteId: 0,
 };
 
-const emptyUpdateForm = {
-  status: "OPEN",
-  priority: "MEDIUM",
-  scheduledDate: "",
-  completedDate: "",
-  notes: "",
-};
-
 function WorkOrders() {
-  const { token } = useAuth();
+  const { token, isAdmin, isDispatcher, isTechnician } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [filteredWorkOrders, setFilteredWorkOrders] = useState<WorkOrder[]>([]);
@@ -87,49 +34,61 @@ function WorkOrders() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [updateForm, setUpdateForm] = useState(emptyUpdateForm);
   const [selectedTechnician, setSelectedTechnician] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [history, setHistory] = useState<WorkOrderHistory[]>([]);
 
   useEffect(() => {
     if (!token) return;
 
-    Promise.all([getWorkOrders(token), getCustomers(token), getSites(token), getUsers(token)])
-      .then(([workOrderData, customerData, siteData, userData]) => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const promises: Promise<any>[] = [getWorkOrders(token)];
+
+        if (isAdmin || isDispatcher) {
+          promises.push(getCustomers(token));
+          promises.push(getSites(token));
+          promises.push(getUsers(token, "TECHNICIAN"));
+        }
+
+        const [workOrderData, customerData, siteData, userData] = await Promise.all(promises);
+
         setWorkOrders(workOrderData);
         setFilteredWorkOrders(workOrderData);
-        setCustomers(customerData);
-        setSites(siteData);
-        const technicianUsers = userData.filter(
-          (user: User) => user.role === "TECHNICIAN" && user.active === true
-        );
-        setTechnicians(technicianUsers);
-      })
-      .catch((error) => {
+
+        if (isAdmin || isDispatcher) {
+          setCustomers(customerData || []);
+          setSites(siteData || []);
+          setTechnicians((userData || []).filter((u: User) => u.active));
+        }
+      } catch (error: any) {
         console.error(error);
-        showToast("Failed to load work orders", "error");
-      })
-      .finally(() => {
+        showToast(error.message || "Failed to load work orders", "error");
+      } finally {
         setLoading(false);
-      });
-  }, [token, showToast]);
+      }
+    };
+
+    loadData();
+  }, [token, isAdmin, isDispatcher, showToast]);
 
   useEffect(() => {
     let filtered = workOrders;
 
     if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (wo) =>
-          wo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          wo.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          wo.siteName.toLowerCase().includes(searchTerm.toLowerCase())
+          wo.title.toLowerCase().includes(lower) ||
+          wo.customerName.toLowerCase().includes(lower) ||
+          wo.siteName.toLowerCase().includes(lower) ||
+          (wo.technicianName && wo.technicianName.toLowerCase().includes(lower))
       );
     }
 
@@ -137,24 +96,22 @@ function WorkOrders() {
       filtered = filtered.filter((wo) => wo.status === statusFilter);
     }
 
+    if (priorityFilter !== "ALL") {
+      filtered = filtered.filter((wo) => wo.priority === priorityFilter);
+    }
+
     setFilteredWorkOrders(filtered);
-  }, [searchTerm, statusFilter, workOrders]);
+  }, [searchTerm, statusFilter, priorityFilter, workOrders]);
 
   const filteredSites = sites.filter((site) => site.customerId === form.customerId);
 
-  const handleCreateChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleCreateChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = event.target;
     setForm((previous) => ({
       ...previous,
       [name]: name === "customerId" || name === "siteId" ? Number(value) : value,
-    }));
-  };
-
-  const handleUpdateChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = event.target;
-    setUpdateForm((previous) => ({
-      ...previous,
-      [name]: value,
     }));
   };
 
@@ -163,145 +120,68 @@ function WorkOrders() {
     setShowCreateModal(true);
   };
 
-  const handleCloseCreateModal = () => {
-    setShowCreateModal(false);
-    setForm(emptyForm);
+  const handleCreateWorkOrder = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (form.customerId === 0) {
+      showToast("Please select a customer", "error");
+      return;
+    }
+    if (form.siteId === 0) {
+      showToast("Please select a service site", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const newWorkOrder = await createWorkOrder(token!, form);
+      setWorkOrders((previous) => [newWorkOrder, ...previous]);
+      showToast("Work order created successfully", "success");
+      setShowCreateModal(false);
+      setForm(emptyForm);
+      navigate(`/workorders/${newWorkOrder.id}`);
+    } catch (error: any) {
+      showToast(error.message || "Failed to create work order", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleOpenUpdateModal = (workOrder: WorkOrder) => {
-    setSelectedWorkOrder(workOrder);
-    setUpdateForm({
-      status: workOrder.status,
-      priority: workOrder.priority,
-      scheduledDate: workOrder.scheduledDate ? workOrder.scheduledDate.slice(0, 16) : "",
-      completedDate: workOrder.completedDate ? workOrder.completedDate.slice(0, 16) : "",
-      notes: workOrder.notes || "",
-    });
-    setShowUpdateModal(true);
-  };
-
-  const handleCloseUpdateModal = () => {
-    setShowUpdateModal(false);
-    setSelectedWorkOrder(null);
-    setUpdateForm(emptyUpdateForm);
-  };
-
-  const handleOpenAssignModal = (workOrder: WorkOrder) => {
+  const handleOpenAssignModal = (workOrder: WorkOrder, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedWorkOrder(workOrder);
     setSelectedTechnician(workOrder.technicianId);
     setShowAssignModal(true);
   };
 
-  const handleCloseAssignModal = () => {
-    setShowAssignModal(false);
-    setSelectedWorkOrder(null);
-    setSelectedTechnician(null);
-  };
-
-  const handleOpenHistoryModal = async (workOrder: WorkOrder) => {
-    setSelectedWorkOrder(workOrder);
-    setShowHistoryModal(true);
-    try {
-      const historyData = await getWorkOrderHistory(token, workOrder.id);
-      setHistory(historyData);
-    } catch (error) {
-      console.error(error);
-      showToast("Failed to load work order history", "error");
-    }
-  };
-
-  const handleCloseHistoryModal = () => {
-    setShowHistoryModal(false);
-    setSelectedWorkOrder(null);
-    setHistory([]);
-  };
-
-  const handleCreateWorkOrder = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleAssignTechnician = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedWorkOrder || !selectedTechnician) return;
     setSubmitting(true);
 
     try {
-      if (form.customerId === 0) {
-        showToast("Please select a customer", "error");
-        setSubmitting(false);
-        return;
-      }
-      if (form.siteId === 0) {
-        showToast("Please select a site", "error");
-        setSubmitting(false);
-        return;
-      }
-
-      const newWorkOrder = await createWorkOrder(token, form);
-      setWorkOrders((previous) => [...previous, newWorkOrder]);
-      showToast("Work order created successfully", "success");
-      handleCloseCreateModal();
-    } catch (error) {
-      console.error(error);
-      showToast("Failed to create work order", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleUpdateWorkOrder = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setSubmitting(true);
-
-    if (!selectedWorkOrder) return;
-
-    try {
-      const updatedWorkOrder = await updateWorkOrder(token, selectedWorkOrder.id, updateForm);
+      const updated = await assignTechnician(token!, selectedWorkOrder.id, selectedTechnician);
       setWorkOrders((previous) =>
-        previous.map((wo) => (wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo))
-      );
-      showToast("Work order updated successfully", "success");
-      handleCloseUpdateModal();
-    } catch (error) {
-      console.error(error);
-      showToast("Failed to update work order", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleAssignTechnician = async () => {
-    if (!selectedWorkOrder) return;
-    setSubmitting(true);
-
-    try {
-      await assignTechnician(token, selectedWorkOrder.id, { technicianId: selectedTechnician });
-      setWorkOrders((previous) =>
-        previous.map((wo) =>
-          wo.id === selectedWorkOrder.id
-            ? {
-                ...wo,
-                technicianId: selectedTechnician,
-                technicianName: technicians.find((t) => t.id === selectedTechnician)?.userName || null,
-              }
-            : wo
-        )
+        previous.map((wo) => (wo.id === selectedWorkOrder.id ? updated : wo))
       );
       showToast("Technician assigned successfully", "success");
-      handleCloseAssignModal();
-    } catch (error) {
-      console.error(error);
-      showToast("Failed to assign technician", "error");
+      setShowAssignModal(false);
+    } catch (error: any) {
+      showToast(error.message || "Failed to assign technician", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteWorkOrder = async (id: number) => {
+  const handleDeleteWorkOrder = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this work order?")) return;
 
     try {
-      await deleteWorkOrder(token, id);
+      await deleteWorkOrder(token!, id);
       setWorkOrders((previous) => previous.filter((wo) => wo.id !== id));
       showToast("Work order deleted successfully", "success");
-    } catch (error) {
-      console.error(error);
-      showToast("Failed to delete work order", "error");
+    } catch (error: any) {
+      showToast(error.message || "Failed to delete work order", "error");
     }
   };
 
@@ -313,8 +193,8 @@ function WorkOrders() {
       COMPLETED: { color: "success", label: "Completed" },
       CANCELLED: { color: "danger", label: "Cancelled" },
     };
-    const statusInfo = statusMap[status] || { color: "secondary", label: status };
-    return <span className={`badge badge-${statusInfo.color}`}>{statusInfo.label}</span>;
+    const s = statusMap[status] || { color: "secondary", label: status };
+    return <span className={`badge badge-${s.color}`}>{s.label}</span>;
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -324,8 +204,8 @@ function WorkOrders() {
       HIGH: { color: "warning", label: "High" },
       URGENT: { color: "danger", label: "Urgent" },
     };
-    const priorityInfo = priorityMap[priority] || { color: "secondary", label: priority };
-    return <span className={`badge badge-${priorityInfo.color}`}>{priorityInfo.label}</span>;
+    const p = priorityMap[priority] || { color: "secondary", label: priority };
+    return <span className={`badge badge-${p.color}`}>{p.label}</span>;
   };
 
   if (loading) {
@@ -339,36 +219,42 @@ function WorkOrders() {
 
   return (
     <div className="fade-in">
-      {/* Header */}
+      {/* Header and Controls */}
       <div className="card mb-4">
-        <div className="card-header">
+        <div className="card-header flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h4 className="card-title">Work Orders</h4>
+            <h4 className="card-title" style={{ margin: 0 }}>
+              {isTechnician ? "My Assigned Work Orders" : "Field Work Orders"}
+            </h4>
             <span className="badge badge-secondary">{filteredWorkOrders.length} total</span>
           </div>
-          <button onClick={handleOpenCreateModal} className="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Create Work Order
-          </button>
+
+          {(isAdmin || isDispatcher) && (
+            <button onClick={handleOpenCreateModal} className="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Create Work Order
+            </button>
+          )}
         </div>
+
         <div className="card-body">
-          <div className="flex gap-3">
+          <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
             <input
               type="text"
               className="form-input"
-              placeholder="Search work orders..."
+              placeholder="Search by title, customer, site, technician..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: "220px" }}
             />
             <select
               className="form-select"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ width: "200px" }}
+              style={{ width: "170px" }}
             >
               <option value="ALL">All Status</option>
               <option value="OPEN">Open</option>
@@ -376,6 +262,18 @@ function WorkOrders() {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="COMPLETED">Completed</option>
               <option value="CANCELLED">Cancelled</option>
+            </select>
+            <select
+              className="form-select"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              style={{ width: "160px" }}
+            >
+              <option value="ALL">All Priorities</option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
             </select>
           </div>
         </div>
@@ -387,14 +285,20 @@ function WorkOrders() {
           <div className="empty-state">
             <div className="empty-state-icon">📋</div>
             <h4 className="empty-state-title">
-              {searchTerm || statusFilter !== "ALL" ? "No work orders found" : "No work orders yet"}
+              {searchTerm || statusFilter !== "ALL" || priorityFilter !== "ALL"
+                ? "No matching work orders found"
+                : isTechnician
+                ? "No work orders assigned to you yet"
+                : "No work orders in system"}
             </h4>
             <p className="empty-state-description">
-              {searchTerm || statusFilter !== "ALL"
-                ? "Try different filters or search terms"
-                : "Create your first work order to get started"}
+              {searchTerm || statusFilter !== "ALL" || priorityFilter !== "ALL"
+                ? "Try clearing filters to see all work orders."
+                : (isAdmin || isDispatcher)
+                ? "Create a work order to begin operations."
+                : "Check back later when dispatchers assign jobs to you."}
             </p>
-            {!searchTerm && statusFilter === "ALL" && (
+            {(isAdmin || isDispatcher) && !searchTerm && statusFilter === "ALL" && (
               <button onClick={handleOpenCreateModal} className="btn btn-primary">
                 Create Work Order
               </button>
@@ -413,73 +317,69 @@ function WorkOrders() {
                   <th>Status</th>
                   <th>Priority</th>
                   <th>Technician</th>
-                  <th>Created</th>
+                  <th>Scheduled / Visit</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredWorkOrders.map((workOrder) => (
-                  <tr key={workOrder.id}>
+                {filteredWorkOrders.map((wo) => (
+                  <tr
+                    key={wo.id}
+                    onClick={() => navigate(`/workorders/${wo.id}`)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <td>
-                      <div style={{ fontWeight: "500", color: "#1a1a1a" }}>{workOrder.title}</div>
+                      <div style={{ fontWeight: 600, color: "#2563eb" }}>{wo.title}</div>
+                      {wo.isOverdue && (
+                        <span className="badge badge-danger" style={{ fontSize: "0.65rem", marginTop: "2px" }}>
+                          OVERDUE
+                        </span>
+                      )}
                     </td>
-                    <td>{workOrder.customerName}</td>
-                    <td>{workOrder.siteName}</td>
-                    <td>{getStatusBadge(workOrder.status)}</td>
-                    <td>{getPriorityBadge(workOrder.priority)}</td>
+                    <td>{wo.customerName}</td>
+                    <td>{wo.siteName}</td>
+                    <td>{getStatusBadge(wo.status)}</td>
+                    <td>{getPriorityBadge(wo.priority)}</td>
                     <td>
-                      {workOrder.technicianName ? (
-                        <span className="badge badge-secondary">{workOrder.technicianName}</span>
+                      {wo.technicianName ? (
+                        <span className="badge badge-secondary">{wo.technicianName}</span>
                       ) : (
                         <span style={{ color: "var(--text-muted)" }}>Unassigned</span>
                       )}
                     </td>
-                    <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                      {new Date(workOrder.createdAt).toLocaleDateString()}
+                    <td style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                      {wo.scheduledDate
+                        ? new Date(wo.scheduledDate).toLocaleDateString()
+                        : "Not scheduled"}
                     </td>
                     <td>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleOpenUpdateModal(workOrder)}
-                          className="btn btn-secondary btn-sm"
-                          title="Update"
+                        <Link
+                          to={`/workorders/${wo.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="btn btn-primary btn-sm"
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleOpenAssignModal(workOrder)}
-                          className="btn btn-secondary btn-sm"
-                          title="Assign Technician"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleOpenHistoryModal(workOrder)}
-                          className="btn btn-secondary btn-sm"
-                          title="History"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteWorkOrder(workOrder.id)}
-                          className="btn btn-danger btn-sm"
-                          title="Delete"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                          </svg>
-                        </button>
+                          {isTechnician ? "Open Job" : "Details"}
+                        </Link>
+
+                        {(isAdmin || isDispatcher) && (
+                          <>
+                            <button
+                              onClick={(e) => handleOpenAssignModal(wo, e)}
+                              className="btn btn-secondary btn-sm"
+                              title="Assign Technician"
+                            >
+                              Assign
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteWorkOrder(wo.id, e)}
+                              className="btn btn-danger btn-sm"
+                              title="Delete"
+                            >
+                              ✕
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -493,8 +393,8 @@ function WorkOrders() {
       {/* Create Work Order Modal */}
       {showCreateModal && (
         <Modal
-          title="Create Work Order"
-          onClose={handleCloseCreateModal}
+          title="Create New Work Order"
+          onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateWorkOrder}
           submitting={submitting}
         >
@@ -508,16 +408,16 @@ function WorkOrders() {
               required
             >
               <option value={0}>Select Customer</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.companyName}
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.companyName}
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Site *</label>
+            <label className="form-label">Service Site *</label>
             <select
               name="siteId"
               className="form-select"
@@ -527,9 +427,9 @@ function WorkOrders() {
               disabled={form.customerId === 0}
             >
               <option value={0}>Select Site</option>
-              {filteredSites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.siteName}
+              {filteredSites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.siteName} ({s.address})
                 </option>
               ))}
             </select>
@@ -540,7 +440,7 @@ function WorkOrders() {
             <input
               name="title"
               className="form-input"
-              placeholder="Enter work order title"
+              placeholder="e.g. Pump seal leak repair"
               value={form.title}
               onChange={handleCreateChange}
               required
@@ -552,10 +452,11 @@ function WorkOrders() {
             <textarea
               name="description"
               className="form-textarea"
-              placeholder="Enter work order description"
+              placeholder="Describe issue reported by customer..."
               value={form.description}
               onChange={handleCreateChange}
               required
+              rows={3}
             />
           </div>
 
@@ -577,150 +478,33 @@ function WorkOrders() {
         </Modal>
       )}
 
-      {/* Update Work Order Modal */}
-      {showUpdateModal && selectedWorkOrder && (
-        <Modal
-          title="Update Work Order"
-          onClose={handleCloseUpdateModal}
-          onSubmit={handleUpdateWorkOrder}
-          submitting={submitting}
-        >
-          <div className="form-group">
-            <label className="form-label">Status *</label>
-            <select
-              name="status"
-              className="form-select"
-              value={updateForm.status}
-              onChange={handleUpdateChange}
-              required
-            >
-              <option value="OPEN">Open</option>
-              <option value="ASSIGNED">Assigned</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Priority *</label>
-            <select
-              name="priority"
-              className="form-select"
-              value={updateForm.priority}
-              onChange={handleUpdateChange}
-              required
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="URGENT">Urgent</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Scheduled Date</label>
-            <input
-              name="scheduledDate"
-              type="datetime-local"
-              className="form-input"
-              value={updateForm.scheduledDate}
-              onChange={handleUpdateChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Completed Date</label>
-            <input
-              name="completedDate"
-              type="datetime-local"
-              className="form-input"
-              value={updateForm.completedDate}
-              onChange={handleUpdateChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea
-              name="notes"
-              className="form-textarea"
-              placeholder="Enter notes"
-              value={updateForm.notes}
-              onChange={handleUpdateChange}
-            />
-          </div>
-        </Modal>
-      )}
-
       {/* Assign Technician Modal */}
       {showAssignModal && selectedWorkOrder && (
         <Modal
-          title="Assign Technician"
-          onClose={handleCloseAssignModal}
+          title={`Assign Technician: ${selectedWorkOrder.title}`}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedWorkOrder(null);
+          }}
           onSubmit={handleAssignTechnician}
           submitting={submitting}
         >
           <div className="form-group">
-            <label className="form-label">Select Technician *</label>
+            <label className="form-label">Select Field Technician *</label>
             <select
               className="form-select"
               value={selectedTechnician || ""}
               onChange={(e) => setSelectedTechnician(Number(e.target.value) || null)}
               required
             >
-              <option value="">Unassigned</option>
-              {technicians.map((technician) => (
-                <option key={technician.id} value={technician.id}>
-                  {technician.userName} ({technician.email})
+              <option value="">Choose technician...</option>
+              {technicians.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.userName} ({t.email})
                 </option>
               ))}
             </select>
           </div>
-        </Modal>
-      )}
-
-      {/* History Modal */}
-      {showHistoryModal && selectedWorkOrder && (
-        <Modal
-          title={`Work Order History - ${selectedWorkOrder.title}`}
-          onClose={handleCloseHistoryModal}
-          onSubmit={handleCloseHistoryModal}
-          submitting={false}
-          showSubmit={false}
-        >
-          {history.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">📜</div>
-              <h4 className="empty-state-title">No history yet</h4>
-              <p className="empty-state-description">
-                This work order has no history records.
-              </p>
-            </div>
-          ) : (
-            <div className="table-container">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Status</th>
-                    <th>Description</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((record) => (
-                    <tr key={record.id}>
-                      <td>{getStatusBadge(record.status)}</td>
-                      <td>{record.description}</td>
-                      <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                        {new Date(record.createdAt).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </Modal>
       )}
     </div>
@@ -733,14 +517,12 @@ function Modal({
   onSubmit,
   submitting,
   children,
-  showSubmit = true,
 }: {
   title: string;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
   submitting: boolean;
   children: React.ReactNode;
-  showSubmit?: boolean;
 }) {
   return (
     <div
@@ -758,25 +540,13 @@ function Modal({
         padding: "1rem",
       }}
     >
-      <div
-        className="card"
-        style={{
-          maxWidth: "500px",
-          width: "100%",
-          maxHeight: "90vh",
-          overflowY: "auto",
-        }}
-      >
-        <div className="card-header">
-          <h4 className="card-title">{title}</h4>
-          <button
-            onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: "0.5rem" }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+      <div className="card" style={{ maxWidth: "500px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+        <div className="card-header flex items-center justify-between">
+          <h4 className="card-title" style={{ margin: 0 }}>
+            {title}
+          </h4>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.5rem" }}>
+            ✕
           </button>
         </div>
         <form onSubmit={onSubmit}>
@@ -785,18 +555,9 @@ function Modal({
             <button type="button" onClick={onClose} className="btn btn-secondary" disabled={submitting}>
               Cancel
             </button>
-            {showSubmit && (
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? (
-                  <span className="flex items-center gap-2">
-                    <div className="spinner" style={{ width: "14px", height: "14px" }}></div>
-                    Saving...
-                  </span>
-                ) : (
-                  "Save"
-                )}
-              </button>
-            )}
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? "Saving..." : "Save"}
+            </button>
           </div>
         </form>
       </div>

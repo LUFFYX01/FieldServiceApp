@@ -45,6 +45,10 @@ public class Part {
     @Column(nullable = false)
     private Boolean active;
 
+    @Column(name = "low_stock_threshold", nullable = false)
+    @Builder.Default
+    private Integer lowStockThreshold = 5;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
